@@ -359,9 +359,18 @@ namespace Chroma
         OC0 *= 0.0;
         OD *= 0.0;
         OD0 *= 0.0;
-
-
-
+        
+        //manually do the z=2 operators
+        u2 = shift(u[z], FORWARD, z);
+        un = u[z]*u2;
+        for(int mu = 0; mu < Nd; mu++)
+        {
+            for(int nu = mu+1; nu < Nd; nu++)
+            {
+                Fn[nu][mu] = shift(shift(F[nu][mu], FORWARD, z), FORWARD, z);
+                Fn[mu][nu] = -Fn[nu][mu];
+            }
+        }
         
         for(int i=0;i<4; i++)
         {
