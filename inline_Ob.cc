@@ -371,10 +371,25 @@ namespace Chroma
                 Fn[mu][nu] = -Fn[nu][mu];
             }
         }
-        
+        //manually do the z=1 operators, and check the shift function
+/*
+        u2 = shift(shift(u[z], FORWARD, z), BACKWARD, z);
+        un = u2;
+        for(int mu = 0; mu < Nd; mu++)
+        {
+            for(int nu = mu+1; nu < Nd; nu++)
+            {
+                Fn[nu][mu] = shift(shift(shift(F[nu][mu], FORWARD, z), FORWARD, z), BACKWARD,z);
+                Fn[mu][nu] = -Fn[nu][mu];
+            }
+        }
+*/
+
+		
         for(int i=0;i<4; i++)
         {
             O3 += F[z][i]*un*Fn[z][i]*adj(un);
+            //O3 += F[z][i]*un*Fn[z][i]*adj(u2)*adj(u[z]);
             O30 += F[z][i]*F[z][i];
         }
 
