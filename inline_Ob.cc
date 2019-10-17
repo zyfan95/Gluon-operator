@@ -163,6 +163,7 @@ namespace Chroma
 	multi1d<LatticeColorMatrix> u;
 	u = TheNamedObjMap::Instance().getData< multi1d<LatticeColorMatrix> >(params.named_obj.gauge_id);
 
+	Wloop(xml_out, "GMF_O_b", u);
 	//Create variables to store the plaquette and the average
 	//trace of the plaquette
 	multi3d<LatticeColorMatrix> plane_plaq;
@@ -274,11 +275,11 @@ namespace Chroma
         	nF.resize(Nd,Nd);
                 
                 // Initialize the link with n=1 along z direction and backward z directon
-        	LatticeColorMatrix u0, un, u1, nu, u2, u3;
+        	LatticeColorMatrix u0, un, u1, u2, u3;
         	u0 = u[z];
        	 	un = u[z]; //First forward link
-        	u1 = adj(shift(u[z], BACKWARD, z)); 
-        	nu = u1; //First backward link
+        	//u1 = adj(shift(u[z], BACKWARD, z)); 
+        	//nu = u1; //First backward link
 
 		// Calculate the F, set the Fn and nF equal to the local one.
         	for(int mu = 0; mu < Nd; mu++)
@@ -296,7 +297,35 @@ namespace Chroma
                 	nF[nu][mu] = F[nu][mu];
                 	nF[mu][nu] = -nF[nu][mu];
            		}	
-       		 }    
+       		 }   
+
+/*
+                        for(int i=1;i<4; i++)
+                        {
+                                O1 += F[3][i]*un*Fn[z][i]*adj(un);
+                                O10 += F[3][i]*F[z][i];
+                        }
+ 
+                                multi1d<int> Coord_loc, Coord_shift ;
+                                Coord_loc.resize(Nd);
+				Coord_shift.resize(Nd);
+                                Coord_loc[3] = t;
+                                Coord_shift[3] = t;
+                                for(int x = 0; x < Layout::lattSize()[0];x++)
+                                  for(int y = 0; y < Layout::lattSize()[1];y++)
+                                    for(int Z = 0; Z < Layout::lattSize()[2];Z++)
+                                        {
+                                                Coord_loc[0] = x;
+                                                Coord_loc[1] = y;
+                                                Coord_loc[2] = Z;
+						Coord_shift[0] = x;
+                                                Coord_shift[1] = y;
+                                                Coord_shift[2] = Z;
+						Coord_shift[z] = (Coord_shift[z]+1)%Layout::lattSize()[z];
+						 =peekSite(F[3][i], Coord_loc)*peekSite(u[z],Coord_loc)*peekSite(Fn[z][i], Coord_shift)*peekSite(adj(u[z]),Coord_loc);	
+					}
+
+*/
 
                 //loop over the wilson length n
         	for(int n = 1; n < mn; n++)
@@ -334,8 +363,57 @@ namespace Chroma
           			//u1 =  shift(u1, BACKWARD, z);
           			//nu = nu*u1;
 
-       			 }		
+        			 }		
 
+
+
+
+        	multi2d<LatticeColorMatrix> plane_plaq_12;
+        	multi2d<Double> tr_plane_plaq_12;
+        	plane_plaq_12.resize(Nd,Nd);
+        	tr_plane_plaq_12.resize(Nd,Nd);
+
+		for(int mu = 0; mu < Nd; mu++)
+        	{
+            		for(int nu = mu+1; nu < Nd; nu++)
+            		{
+			//	plane_plaq_12[nu][mu] = u[mu]*shift(u[mu], FORWARD, mu)*shift(shift(u[nu], FORWARD, mu), FORWARD, mu)*shift(adj(u[mu]*shift(u[mu], FORWARD, mu)), FORWARD, nu)*adj(u[nu]);
+				plane_plaq_12[nu][mu] = u[mu]*shift(u[mu], FORWARD, mu)*shift(shift(u[nu], FORWARD, mu), FORWARD, mu)*adj(shift(u[mu]*shift(u[mu], FORWARD, mu), FORWARD, nu))*adj(u[nu]);
+			}
+		}
+		
+		if(n == 2)
+		{
+			 plane_plaq_12[z+1][z] = un*shift(shift(u[z+1], FORWARD, z), FORWARD, z)*shift(adj(un), FORWARD, z+1)*adj(u[z+1]); 			
+		}
+		
+                for(int mu = 0; mu < Nd; mu++)
+                {
+                        for(int nu = mu+1; nu < Nd; nu++)
+                        {
+                                tr_plane_plaq_12[nu][mu] = sum(real(trace(plane_plaq_12[nu][mu])));
+                                tr_plane_plaq_12[nu][mu] /= Double(Layout::vol() * Nc);
+                                plane_plaq_12[mu][nu] = plane_plaq_12[nu][mu]; //symmetric
+                                tr_plane_plaq_12[mu][nu] = tr_plane_plaq_12[nu][mu]; //symmetric
+                        }
+                }
+
+
+
+
+
+                /** Write plane plaq to xml file **/
+
+        	for(int mu = 0; mu < Nd; mu++)
+        	{
+            		for(int nu = mu+1; nu < Nd; nu++)
+            		{
+                		write(xml_out, "plane_plaq_12_" + std::to_string(mu) +
+                      		std::to_string(nu), tr_plane_plaq_12[mu][nu]);
+            		}
+        	}
+
+                                                	
 /*
 		        QDPIO::cout << "Finding E/B" << std::endl;
 
