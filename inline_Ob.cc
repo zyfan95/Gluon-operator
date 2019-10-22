@@ -337,6 +337,55 @@ namespace Chroma
        			 }		
 
 /*
+                multi2d<LatticeColorMatrix> plane_plaq_12;
+                multi2d<Double> tr_plane_plaq_12;
+                plane_plaq_12.resize(Nd,Nd);
+                tr_plane_plaq_12.resize(Nd,Nd);
+
+
+                for(int mu = 0; mu < Nd; mu++)
+                {
+                        for(int nu = mu+1; nu < Nd; nu++)
+                        {
+                        //      pl：ane_plaq_12[nu][mu] = u[mu]*shift(u[mu], FORWARD, mu)*shift(shift(u[nu], FORWARD, mu), FORWARD, mu)*shift(adj(u[mu]*shift(u[mu], FORWARD, mu)), FORWARD, nu)*adj(u[nu]);
+                                plane_plaq_12[nu][mu] = u[mu]*shift(u[mu], FORWARD, mu)*shift(shift(u[nu], FORWARD, mu), FORWARD, mu)*adj(shift(u[mu]*shift(u[mu], FORWARD, mu), FORWARD, nu))*adj(u[nu]);
+                        }
+                }
+
+                if(n == 2)
+                {
+                         plane_plaq_12[z+1][z] = un*shift(shift(u[z+1], FORWARD, z), FORWARD, z)*shift(adj(un), FORWARD, z+1)*adj(u[z+1]);
+                }
+
+                for(int mu = 0; mu < Nd; mu++)
+                {
+                        for(int nu = mu+1; nu < Nd; nu++)
+                        {
+                                tr_plane_plaq_12[nu][mu] = sum(real(trace(plane_plaq_12[nu][mu])));
+                                tr_plane_plaq_12[nu][mu] /= Double(Layout::vol() * Nc);
+                                plane_plaq_12[mu][nu] = plane_plaq_12[nu][mu]; //symmetric
+                                tr_plane_plaq_12[mu][nu] = tr_plane_plaq_12[nu][mu]; //symmetric
+                        }
+                }
+
+
+
+
+
+                /** Write plane plaq to xml file **/
+
+                for(int mu = 0; mu < Nd; mu++)
+                {
+                        for(int nu = mu+1; nu < Nd; nu++)
+                        {
+                                write(xml_out, "plane_plaq_12_" + std::to_string(mu) +
+                                std::to_string(nu), tr_plane_plaq_12[mu][nu]);
+                        }
+                }
+
+
+
+
 		        QDPIO::cout << "Finding E/B" << std::endl;
 
 
