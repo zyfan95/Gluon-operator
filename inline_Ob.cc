@@ -139,19 +139,24 @@ namespace Chroma
 	
 	
 	
-	
-	
-	                multi1d<LatticeColorMatrix> u_t, u_m, u_p, u_v;
+	/*The test on 1*n plaquette with the chroma ouput
+	*/
+	        multi1d<LatticeColorMatrix> u_t, u_m, u_p, u_v;
 
-                u_t.resize(4);
-                u_m.resize(4);
-                u_p.resize(4);
-                u_v.resize(4);
+                u_t.resize(4); // A intermediate 
+                u_m.resize(4); // The wilson that moves forward towards the "n" direction n times
+                u_p.resize(4); // The parallel wilson line with the length n
+                u_v.resize(4); // The wilson line is vertical to u_p and link with the end of u_p
 
 	        for(int mu = 0; mu < Nd; mu++)
                 {
+			u_m[mu] = u[mu]; //Initialize
+			u_p[mu] = u[mu];
                         for(int nu = mu+1; nu < Nd; nu++)
                         {
+				u_v[nu] = u[nu];
+			}
+		}
 
                 multi2d<LatticeColorMatrix> plane_plaq_1n;
                 multi2d<Double> tr_plane_plaq_1n;
@@ -192,7 +197,7 @@ namespace Chroma
                         }
                 }
 
-	
+	// End of the m*n
 	
 	
 	
