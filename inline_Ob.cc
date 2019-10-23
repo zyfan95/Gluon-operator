@@ -136,6 +136,69 @@ namespace Chroma
 	}
     }
     
+	
+	
+	
+	
+	
+	                multi1d<LatticeColorMatrix> u_t, u_m, u_p, u_v;
+
+                u_t.resize(4);
+                u_m.resize(4);
+                u_p.resize(4);
+                u_v.resize(4);
+
+	        for(int mu = 0; mu < Nd; mu++)
+                {
+                        for(int nu = mu+1; nu < Nd; nu++)
+                        {
+
+                multi2d<LatticeColorMatrix> plane_plaq_1n;
+                multi2d<Double> tr_plane_plaq_1n;
+                plane_plaq_1n.resize(Nd,Nd);
+                tr_plane_plaq_1n.resize(Nd,Nd);
+
+                for(int mu = 0; mu < Nd; mu++)
+                {
+                        u_t[mu] = u_m[mu];
+                        u_m[mu] = shift(u_t[mu], FORWARD, mu);
+                        u_t[mu] = u_p[mu];
+                        u_p[mu] = u_t[mu]*u_m[mu];
+                        for(int nu = mu+1; nu < Nd; nu++)
+                        {
+                                u_t[nu] = u_v[nu];
+                                u_v[nu] = shift(u_t[nu], FORWARD, mu);
+                        }
+                }
+
+
+                for(int mu = 0; mu < Nd; mu++)
+                {
+                        for(int nu = mu+1; nu < Nd; nu++)
+                        {
+                                plane_plaq_1n[nu][mu] = u_p[mu]*u_v[nu]*adj(shift(u_p[nu], FORWARD, nu))*adj(u[nu]);
+                        }
+                }
+
+	
+                for(int mu = 0; mu < Nd; mu++)
+                {
+                        for(int nu = mu+1; nu < Nd; nu++)
+                        {
+                                tr_plane_plaq_12[nu][mu] = sum(real(trace(plane_plaq_12[nu][mu])));
+                                tr_plane_plaq_12[nu][mu] /= Double(Layout::vol() * Nc);
+                                plane_plaq_12[mu][nu] = plane_plaq_12[nu][mu]; //symmetric
+                                tr_plane_plaq_12[mu][nu] = tr_plane_plaq_12[nu][mu]; //symmetric
+                        }
+                }
+
+	
+	
+	
+	
+	
+	
+	
     
     /*** Measurement code stars here ***/
     void InlineMyMeas::func(unsigned long update_no,
