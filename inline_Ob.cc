@@ -112,6 +112,24 @@ namespace Chroma
 	}
     } //End namespace InlineObEnv
 
+	
+    LatticeColorMatrix  wilsonline(int z, int n, LatticeColorMatrix u)
+    {
+        LatticeColorMatrix umed, ushift, uline;
+        ushift = u;
+        uline = u;
+        for(int i = 1; i < n; i++)
+        {
+                umed = ushift;
+                ushift = shift(umed, FORWARD, z);
+                umed = uline;
+                uline = umed * ushift;
+        }
+        return uline;
+    }
+
+
+
     /*** Inline Measurement function implimentation ***/
     // Function call
     void InlineMyMeas::operator()(unsigned long update_no,
@@ -337,6 +355,8 @@ namespace Chroma
        			 }		
 
 /*
+		un = wilsonline(z, n, u[z]);
+		
                 multi2d<LatticeColorMatrix> plane_plaq_12;
                 multi2d<Double> tr_plane_plaq_12;
                 plane_plaq_12.resize(Nd,Nd);
