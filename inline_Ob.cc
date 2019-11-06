@@ -136,7 +136,23 @@ namespace Chroma
 	}
     }
     
-    
+   
+    LatticeColorMatrix  field(int z, int n, LatticeColorMatrix F) /* This function is used to obtain the gluon field F_\mu\nu shift n times along z direction.
+                                                                        The input F is one matrix element of F_\mu\nu.
+                                                                        */
+    {
+        LatticeColorMatrix Fmed, Fshift; /* Fmed is the intermediated variable,
+                                                Fshift is the gluon field F_\mu\nu shift n times along z direction that will be returned
+                                                */
+        Fshift = F;
+        for(int i = 1; i <= n; i++)
+        {
+                Fmed = Fshift;
+                Fshift = shift(Fmed, FORWARD, z);
+        }
+        return Fshift;
+    }
+ 
 
     LatticeColorMatrix  wilsonline(int z, int n, LatticeColorMatrix u) /* This function is used to construct and return the wilson line at z direction with the length n. 
 									The input u is the unit wilson link at z direction. 
@@ -144,7 +160,7 @@ namespace Chroma
     {
 	LatticeColorMatrix umed, ushift, uline; /* umed is the intermediated line
 						ushift is the shift n times wilson link
-						uline is the wilson line at z direction with the length n that will be return
+						uline is the wilson line at z direction with the length n that will be returned
 						*/
 	ushift = u;
 	uline = u;
@@ -169,7 +185,7 @@ namespace Chroma
                                                                                         ulinen is the second quater of the wilson line of the plaquette
                                                                                         ulinemshift is the third quater of the wilson line of the plaquette
                                                                                         ulinenshift is the last quater of the wilson line of the plaquette
-											plane_plaq_mn is the m*n plaquette that will be return
+											plane_plaq_mn is the m*n plaquette that will be returned
 											*/
 	ulinem = wilsonline(mu, m, umu); 
 	ulinen = wilsonline(nu, n, unu);
@@ -415,7 +431,8 @@ namespace Chroma
 	    			{
 
 			                Fm[nu][mu] = Fn[nu][mu];
-                			Fn[nu][mu] = shift(Fm[nu][mu], FORWARD, z); //shift Fn forward one lattice unit along z direction
+                		//	Fn[nu][mu] = shift(Fm[nu][mu], FORWARD, z); //shift Fn forward one lattice unit along z direction
+                			Fn[nu][mu] = field(z, n, F[nu][mu]);	
                 			Fn[mu][nu] = -Fn[nu][mu];  //anti-symmetric
 
                                         Fm[nu][mu] = nF[nu][mu];
