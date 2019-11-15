@@ -1,0 +1,298 @@
+#include "inline_Ob.h"
+#include "chroma.h"
+#include <math.h>
+#include <complex>
+#include <iostream>
+#include <string>
+#include "stdio.h"
+
+
+
+namespace Chroma 
+{
+    
+    namespace InlineObEnv 
+    {
+	//Name of the measurement to be called in the XML input file
+	const std::string name = "GMF_O_b";
+	
+	//This function is used with the factory thing
+	AbsInlineMeasurement* createMeasurement(XMLReader& xml_in, 
+						const std::string& path) 
+	{
+	    //Create new instance of measurement class using params
+	    //from the passed xml file
+	    return new InlineMyMeas(InlineObParams(xml_in, path));
+	}
+		
+	// Local registration flag
+	namespace {
+	    bool registered = false;
+	}
+	
+	// Function to register all the factories
+	bool registerAll() 
+	{
+	    bool success = true; 
+	    if (! registered)
+	    {
+		success &= TheInlineMeasurementFactory::Instance().registerObject(name, createMeasurement);
+		QDPIO::cout << "Registering " << name << " " << success << std::endl;
+		registered = true;
+	    }
+	    return success;
+	}
+	
+	
+	
+	/*** Implementation of Parameter functions ***/
+	
+	//Set default parameters
+	InlineObParams::InlineObParams() { frequency = 0; radius = 0; srcs.resize(1); }
+	
+	//Read parameters in from xml file
+	InlineObParams::InlineObParams(XMLReader& xml_in, const std::string& path) 
+	{
+	    try 
+	    {
+		XMLReader paramtop(xml_in, path);
+		
+		if (paramtop.count("Frequency") == 1)
+		    read(paramtop, "Frequency", frequency);
+		else
+		    frequency = 1;
+		
+		read(paramtop, "NamedObject", named_obj);
+
+		//Read in the starting position time (ie the time
+		//of the first source) and the time between each
+		//source. This assumes that each source is equally
+		//spaced in time. See branch First-O_b for code
+		//that drops this assumtion and takes sources
+		//as the arguments (loc & start/stop times)
+		read(paramtop, "Multi_Src", srcs);
+
+		if(paramtop.count("radius") == 1)
+		    read(paramtop, "radius", radius);
+		else
+		    radius = 0;
+
+		
+		// Possible alternate XML file pattern
+		if (paramtop.count("xml_file") != 0) 
+		{
+		    read(paramtop, "xml_file", xml_file);
+		} else
+		    xml_file = "";
+		
+	    }
+	    catch(const std::string& e) 
+	    {
+		QDPIO::cerr << __func__ << ": Caught Exception reading XML: " << e << std::endl;
+		QDP_abort(1);
+	    }
+	}
+	
+	
+	// Write loaded params to xml file
+	void InlineObParams::write(XMLWriter& xml_out, const std::string& path) 
+	{
+	    push(xml_out, path);
+	    
+	    // write our all params
+	    QDP::write(xml_out, "Multi_Src", srcs);
+	    //QDP::write(xml_out, "Named_Object", named_obj);
+	    QDP::write(xml_out, "radius", radius);
+
+		  
+	    
+	    if(xml_file != "")
+		QDP::write(xml_out, "xml_file", xml_file);
+	    pop(xml_out);
+	}
+    } //End namespace InlineObEnv
+
+    /*** Inline Measurement function implimentation ***/
+    // Function call
+    void InlineMyMeas::operator()(unsigned long update_no,
+				  XMLWriter& xml_out) 
+    {
+	// If xml file not empty, then use alternate
+	if (params.xml_file != "")
+	{
+	    std::string xml_file = makeXMLFileName(params.xml_file, update_no);
+
+	    push(xml_out, "GMF_O_b");
+	    write(xml_out, "update_no", update_no);
+	    write(xml_out, "xml_file", xml_file);
+	    pop(xml_out);
+	    
+	    XMLFileWriter xml(xml_file);
+	    func(update_no, xml);
+	}
+	else
+	{
+	    func(update_no, xml_out);
+	}
+    }
+    
+   
+    LatticeColorMatrix  field(int z, int n, LatticeColorMatrix F) /* This function is used to obtain the gluon field F_\mu\nu shift n times along z direction.
+                                                                        The input F is one matrix element of F_\mu\nu.
+                                                                        */
+    {
+        LatticeColorMatrix Fmed, Fshift; /* Fmed is the intermediated variable,
+                                                Fshift is the gluon field F_\mu\nu shift n times along z direction that will be returned
+                                                */
+        Fshift = F;
+        for(int i = 1; i <= n; i++)
+        {
+                Fmed = Fshift;
+                Fshift = shift(Fmed, FORWARD, z);
+        }
+        return Fshift;
+    }
+ 
+
+    LatticeColorMatrix  wilsonline(int z, int n, LatticeColorMatrix u) /* This function is used to construct and return the wilson line at z direction with the length n. 
+									The input u is the unit wilson link at z direction. 
+									*/
+    {
+	LatticeColorMatrix umed, ushift, uline; /* umed is the intermediated line
+						ushift is the shift n times wilson link
+						uline is the wilson line at z direction with the length n that will be returned
+						*/
+	ushift = u;
+	uline = u;
+	for(int i = 1; i < n; i++)
+        {
+		umed = ushift;
+		ushift = shift(umed, FORWARD, z);
+		umed = uline;
+		uline = umed * ushift;
+	}
+	return uline; 
+    }
+
+
+    LatticeColorMatrix  plaquette(int mu, int nu, int m, int n, LatticeColorMatrix umu, LatticeColorMatrix unu) /* The function is to calculte the m*n plaquette at the direction of
+														\mu and \nu. The unit wilson link umu and unu at \mu and \nu direction are
+														necessary input. 
+														*/
+    {
+        LatticeColorMatrix umed, ulinem, ulinen, ulinemshift, ulinenshift, plane_plaq_mn; /* umed is the intermediated line
+											ulinem is the first quater of the wilson line of the plaquette
+                                                                                        ulinen is the second quater of the wilson line of the plaquette
+                                                                                        ulinemshift is the third quater of the wilson line of the plaquette
+                                                                                        ulinenshift is the last quater of the wilson line of the plaquette
+											plane_plaq_mn is the m*n plaquette that will be returned
+											*/
+	ulinem = wilsonline(mu, m, umu); 
+	ulinen = wilsonline(nu, n, unu);
+	ulinemshift = ulinem;
+        ulinenshift = ulinen;
+        for(int i = 1; i <= n; i++)
+        {
+                umed = ulinemshift;
+                ulinemshift = shift(umed, FORWARD, nu);
+        }
+        for(int j = 1; j <= m; j++)
+        {
+                umed = ulinenshift;
+                ulinenshift = shift(umed, FORWARD, mu);
+        }
+	switch (pla_num)  //generate 4 plaquette used in the construction of F_\mu\nu
+        {
+                case 1:plane_plaq_mn = ulinem*ulinenshift*adj(ulinemshift)*adj(ulinen);
+                break;
+                case 2:plane_plaq_mn = shift(ulinenshift*adj(ulinemshift)*adj(ulinen)*ulinem, BACKWARD, mu);
+                break;
+                case 3:plane_plaq_mn = shift(shift(adj(ulinemshift)*adj(ulinen)*ulinem*ulinenshift, BACKWARD, mu), BACKWARD, nu);
+                break;
+                case 4:plane_plaq_mn = shift(adj(ulinen)*ulinem*ulinenshift*adj(ulinemshift), BACKWARD, nu);
+                break;
+        }
+	//plane_plaq_mn = ulinem*ulinenshift*adj(ulinemshift)*adj(ulinen);
+	return plane_plaq_mn;
+    }
+
+    /*** Measurement code stars here ***/
+    void InlineMyMeas::func(unsigned long update_no,
+			   XMLWriter& xml_out) 
+    {
+	START_CODE();
+	
+	QDPIO::cout << InlineObEnv::name << ": Begining" << std::endl;
+	
+	StopWatch snoop;
+	snoop.reset();
+	snoop.start();
+
+	//Print out boilerplate stuff to xml
+	push(xml_out, "GMF_O_b");
+	write(xml_out, "update_no", update_no);
+
+	//Write out the input
+	params.write(xml_out, "Input");
+
+
+	/** Calculate the two dimensional plaquettes **/
+	
+	//Get link matrix
+	multi1d<LatticeColorMatrix> u;
+	u = TheNamedObjMap::Instance().getData< multi1d<LatticeColorMatrix> >(params.named_obj.gauge_id);
+
+	Wloop(xml_out, "GMF_O_b", u);
+	//Create variables to store the plaquette and the average
+	//trace of the plaquette
+        multi3d<LatticeColorMatrix> plane_plaq;
+        plane_plaq.resize(4,Nd,Nd); //Quadrent, plane
+
+        /* Calculate the plaquette and the average trace of
+         * the plaquette
+         */
+        for(int mu = 0; mu < Nd; mu++)
+        {
+            for(int nu = mu+1; nu < Nd; nu++)
+            {
+                plane_plaq[0][nu][mu] = plaquette(mu, nu, 1, 1, u[mu], u[nu], 1);
+		plane_plaq[1][nu][mu] = plaquette(mu, nu, 1, 1, u[mu], u[nu], 2);
+                plane_plaq[2][nu][mu] = plaquette(mu, nu, 1, 1, u[mu], u[nu], 3);
+                plane_plaq[3][nu][mu] = plaquette(mu, nu, 1, 1, u[mu], u[nu], 4);
+	    }
+	}
+        
+	multi2d<LatticeColorMatrix> plane_plaq_12, plane_plaq_13, plane_plaq_14, plane_plaq_22, plane_plaq_32;
+        multi2d<Double> tr_plane_plaq_12, tr_plane_plaq_13, tr_plane_plaq_14, tr_plane_plaq_22, tr_plane_plaq_32;
+        plane_plaq_12.resize(Nd,Nd);
+        plane_plaq_13.resize(Nd,Nd);
+        plane_plaq_14.resize(Nd,Nd);
+        plane_plaq_22.resize(Nd,Nd);
+        plane_plaq_32.resize(Nd,Nd);
+        tr_plane_plaq_12.resize(Nd,Nd);
+        tr_plane_plaq_13.resize(Nd,Nd);
+        tr_plane_plaq_14.resize(Nd,Nd);
+        tr_plane_plaq_22.resize(Nd,Nd);
+        tr_plane_plaq_32.resize(Nd,Nd);
+
+        for(int mu = 0; mu < Nd; mu++)
+        {
+        	for(int nu = mu+1; nu < Nd; nu++)
+                {
+			plane_plaq_12[nu][mu] = plaquette(mu, nu, 1, 2, u[mu], u[nu], 1);
+                       	plane_plaq_13[nu][mu] = plaquette(mu, nu, 1, 3, u[mu], u[nu], 1);
+                        plane_plaq_14[nu][mu] = plaquette(mu, nu, 1, 4, u[mu], u[nu], 1);
+                       	plane_plaq_22[nu][mu] = plaquette(mu, nu, 2, 2, u[mu], u[nu], 1);
+                        plane_plaq_32[nu][mu] = plaquette(mu, nu, 3, 2, u[mu], u[nu], 1);
+                }
+        }
+
+
+
+
+
+     } 
+
+
+}
+;
