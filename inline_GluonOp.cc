@@ -175,7 +175,7 @@ namespace Chroma
     }
 
 
-    LatticeColorMatrix  plaquette(int mu, int nu, int m, int n, LatticeColorMatrix umu, LatticeColorMatrix unu) /* The function is to calculte the m*n plaquette at the direction of
+    LatticeColorMatrix  plaquette(int mu, int nu, int m, int n, LatticeColorMatrix umu, LatticeColorMatrix unu, int pla_num) /* The function is to calculte the m*n plaquette at the direction of
 														\mu and \nu. The unit wilson link umu and unu at \mu and \nu direction are
 														necessary input. 
 														*/
@@ -215,6 +215,16 @@ namespace Chroma
 	//plane_plaq_mn = ulinem*ulinenshift*adj(ulinemshift)*adj(ulinen);
 	return plane_plaq_mn;
     }
+
+    Double tr_plane_pla(int m, int n, LatticeColorMatrix plane_plaq)
+    {
+	Double tr_plane_plaq;
+	tr_plane_plaq = sum(real(trace(plane_plaq)));
+	tr_plane_plaq /= Double(Layout::vol() * Nc);
+	tr_plane_plaq = tr_plane_plaq; //symmetric
+	return tr_plane_plaq;
+    }
+
 
     /*** Measurement code stars here ***/
     void InlineMyMeas::func(unsigned long update_no,
@@ -262,8 +272,9 @@ namespace Chroma
 	    }
 	}
         
-	multi2d<LatticeColorMatrix> plane_plaq_12, plane_plaq_13, plane_plaq_14, plane_plaq_22, plane_plaq_32;
-        multi2d<Double> tr_plane_plaq_12, tr_plane_plaq_13, tr_plane_plaq_14, tr_plane_plaq_22, tr_plane_plaq_32;
+	multi2d<LatticeColorMatrix> plane_plaq_11, plane_plaq_12, plane_plaq_13, plane_plaq_14, plane_plaq_22, plane_plaq_32;
+        multi2d<Double> tr_plane_plaq_11, tr_plane_plaq_12, tr_plane_plaq_13, tr_plane_plaq_14, tr_plane_plaq_22, tr_plane_plaq_32;
+        plane_plaq_11.resize(Nd,Nd);
         plane_plaq_12.resize(Nd,Nd);
         plane_plaq_13.resize(Nd,Nd);
         plane_plaq_14.resize(Nd,Nd);
@@ -279,19 +290,91 @@ namespace Chroma
         {
         	for(int nu = mu+1; nu < Nd; nu++)
                 {
+			plane_plaq_11[nu][mu] = plaquette(mu, nu, 1, 1, u[mu], u[nu], 1);
 			plane_plaq_12[nu][mu] = plaquette(mu, nu, 1, 2, u[mu], u[nu], 1);
                        	plane_plaq_13[nu][mu] = plaquette(mu, nu, 1, 3, u[mu], u[nu], 1);
                         plane_plaq_14[nu][mu] = plaquette(mu, nu, 1, 4, u[mu], u[nu], 1);
                        	plane_plaq_22[nu][mu] = plaquette(mu, nu, 2, 2, u[mu], u[nu], 1);
                         plane_plaq_32[nu][mu] = plaquette(mu, nu, 3, 2, u[mu], u[nu], 1);
+			plane_plaq_11[nu][mu] = plane_plaq_11[mu][nu];
+			plane_plaq_12[nu][mu] = plane_plaq_12[mu][nu];
+                        plane_plaq_13[nu][mu] = plane_plaq_13[mu][nu];
+                        plane_plaq_14[nu][mu] = plane_plaq_14[mu][nu];
+                        plane_plaq_22[nu][mu] = plane_plaq_22[mu][nu];
+                        plane_plaq_32[nu][mu] = plane_plaq_32[mu][nu];
+                }
+        }
+	for(int mu = 0; mu < Nd; mu++)
+	{
+		for(int nu = mu+1; nu < Nd; nu++)
+		{
+			tr_plane_plaq_11[mu][nu] = tr_plane_pla(mu, nu, plane_plaq_11[nu][mu]); //symmetric
+                        tr_plane_plaq_12[mu][nu] = tr_plane_pla(mu, nu, plane_plaq_12[nu][mu]); //symmetric
+                        tr_plane_plaq_13[mu][nu] = tr_plane_pla(mu, nu, plane_plaq_13[nu][mu]); //symmetric
+                        tr_plane_plaq_14[mu][nu] = tr_plane_pla(mu, nu, plane_plaq_14[nu][mu]); //symmetric
+                        tr_plane_plaq_22[mu][nu] = tr_plane_pla(mu, nu, plane_plaq_22[nu][mu]); //symmetric
+                        tr_plane_plaq_32[mu][nu] = tr_plane_pla(mu, nu, plane_plaq_32[nu][mu]); //symmetric
+		}
+	}	
+
+        for(int mu = 0; mu < Nd; mu++)
+        {
+        	for(int nu = mu+1; nu < Nd; nu++)
+        	{
+                	write(xml_out, "plane_plaq_11_" + std::to_string(mu) +
+                	std::to_string(nu), tr_plane_plaq_11[mu][nu]);
+                }
+        }
+
+        for(int mu = 0; mu < Nd; mu++)
+        {
+                for(int nu = mu+1; nu < Nd; nu++)
+                {
+                        write(xml_out, "plane_plaq_12_" + std::to_string(mu) +
+                        std::to_string(nu), tr_plane_plaq_12[mu][nu]);
+                }
+        }
+
+        for(int mu = 0; mu < Nd; mu++)
+        {
+                for(int nu = mu+1; nu < Nd; nu++)
+                {
+                        write(xml_out, "plane_plaq_13_" + std::to_string(mu) +
+                        std::to_string(nu), tr_plane_plaq_13[mu][nu]);
+                }
+        }
+
+        for(int mu = 0; mu < Nd; mu++)
+        {
+                for(int nu = mu+1; nu < Nd; nu++)
+                {
+                        write(xml_out, "plane_plaq_14_" + std::to_string(mu) +
+                        std::to_string(nu), tr_plane_plaq_14[mu][nu]);
+                }
+        }
+
+        for(int mu = 0; mu < Nd; mu++)
+        {
+                for(int nu = mu+1; nu < Nd; nu++)
+                {
+                        write(xml_out, "plane_plaq_22_" + std::to_string(mu) +
+                        std::to_string(nu), tr_plane_plaq_22[mu][nu]);
+                }
+        }
+
+        for(int mu = 0; mu < Nd; mu++)
+        {
+                for(int nu = mu+1; nu < Nd; nu++)
+                {
+                        write(xml_out, "plane_plaq_32_" + std::to_string(mu) +
+                        std::to_string(nu), tr_plane_plaq_32[mu][nu]);
                 }
         }
 
 
 
 
-
-     } 
+    } 
 
 
 }
