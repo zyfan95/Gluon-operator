@@ -136,96 +136,109 @@ namespace Chroma
 	}
     }
     
-   
-    LatticeColorMatrix  field(int z, int n, LatticeColorMatrix F) /* This function is used to obtain the gluon field F_\mu\nu shift n times along z direction.
-                                                                        The input F is one matrix element of F_\mu\nu.
-                                                                        */
+    /* This function is used to obtain the gluon field F_\mu\nu shift "len" times along "dir" direction.
+     * The input F is one matrix element of F_\mu\nu.
+     */
+    LatticeColorMatrix  field(int dir, int len, LatticeColorMatrix F)
     {
-        LatticeColorMatrix Fmed, Fshift; /* Fmed is the intermediated variable,
-                                                Fshift is the gluon field F_\mu\nu shift n times along z direction that will be returned
-                                                */
+        LatticeColorMatrix Ftem, Fshift; /* Ftem is the temporary variable,
+                                            Fshift is the gluon field F_\mu\nu shift "len" times along "dir" direction that will be returned.
+                                          */
         Fshift = F;
-        for(int i = 1; i <= n; i++)
+        for(int i = 1; i <= len; i++)
         {
-                Fmed = Fshift;
-                Fshift = shift(Fmed, FORWARD, z);
+                Ftem = Fshift;
+                Fshift = shift(Ftem, FORWARD, dir);
         }
         return Fshift;
     }
  
-
-    LatticeColorMatrix  wilsonline(int z, int n, LatticeColorMatrix u) /* This function is used to construct and return the wilson line at z direction with the length n. 
-									The input u is the unit wilson link at z direction. 
-									*/
+    /* This function is used to construct and return the wilson line at "dir" direction with the length "len".
+     * The input u is the unit wilson link at "dir" direction.
+     * U(x,x+len\hat{dir})= \sum_{y=x}^{x+len-1}U(y,y+1\hat{dir})
+     */
+    LatticeColorMatrix  wilsonline(int dir, int len, LatticeColorMatrix u) 
     {
-	LatticeColorMatrix umed, ushift, uline; /* umed is the intermediated line
-						ushift is the shift n times wilson link
-						uline is the wilson line at z direction with the length n that will be returned
+	LatticeColorMatrix utem, ushift, uline; /* utem is the temporary wilson line
+						ushift is the shift "len" times wilson link
+						uline is the wilson line at "dir" direction with the length "len" that will be returned
 						*/
 	ushift = u;
 	uline = u;
-	for(int i = 1; i < n; i++)
+	for(int i = 1; i < len; i++)
         {
-		umed = ushift;
-		ushift = shift(umed, FORWARD, z);
-		umed = uline;
-		uline = umed * ushift;
+		utem = ushift;
+		ushift = shift(utem, FORWARD, dir);
+		utem = uline;
+		uline = utem * ushift;
 	}
 	return uline; 
     }
 
-
-    LatticeColorMatrix  plaquette(int mu, int nu, int m, int n, LatticeColorMatrix umu, LatticeColorMatrix unu, int pla_num) /* The function is to calculte the m*n plaquette at the direction of
-														\mu and \nu. The unit wilson link umu and unu at \mu and \nu direction are
-														necessary input. 
-														*/
+    /* The function is to calculte the m*n plaquette at the direction of
+     * \mu and \nu. The unit wilson link umu and unu at \mu and \nu direction are
+     * necessary input.
+     * P1_{\mu\nu}=U(x,x+m\hat{\mu})U(x+m\hat{\mu},x+m\hat{\mu}+n\hat{\nu})U(x+m\hat{\mu}+n\hat{\nu},x+n\hat{\nu})U(x+n\hat{\nu},x)
+     * P2_{\mu\nu}=P1_{\nu,-\mu}
+     * P3_{\mu\nu}=P1_{-\mu,-\nu}
+     * P4_{\mu\nu}=P1_{-\nu,\mu}
+     */ 
+    LatticeColorMatrix  plaquette(int mu, int nu, int m, int n, LatticeColorMatrix umu, LatticeColorMatrix unu, int pla_num)
     {
-        LatticeColorMatrix umed, ulinem, ulinen, ulinemshift, ulinenshift, plane_plaq_mn; /* umed is the intermediated line
-											ulinem is the first quater of the wilson line of the plaquette
-                                                                                        ulinen is the second quater of the wilson line of the plaquette
-                                                                                        ulinemshift is the third quater of the wilson line of the plaquette
-                                                                                        ulinenshift is the last quater of the wilson line of the plaquette
+        LatticeColorMatrix wltem, wlmu, wlnu, wlmu_shift, wlnu_shift, plane_plaq_mn; /* wltem is the intermediated line
+											wlmu is the first quater of the wilson line of the plaquette
+                                                                                        wlnu is the second quater of the wilson line of the plaquette
+                                                                                        wlmu_shift is the third quater of the wilson line of the plaquette
+                                                                                        wlnu_shift is the last quater of the wilson line of the plaquette
 											plane_plaq_mn is the m*n plaquette that will be returned
 											*/
-	ulinem = wilsonline(mu, m, umu); 
-	ulinen = wilsonline(nu, n, unu);
-	ulinemshift = ulinem;
-        ulinenshift = ulinen;
+	wlmu = wilsonline(mu, m, umu); 
+	wlnu = wilsonline(nu, n, unu);
+	wlmu_shift = wlmu;
+        wlnu_shift = wlnu;
         for(int i = 1; i <= n; i++)
         {
-                umed = ulinemshift;
-                ulinemshift = shift(umed, FORWARD, nu);
+                wltem = wlmu_shift;
+                wlmu_shift = shift(wltem, FORWARD, nu);
         }
         for(int j = 1; j <= m; j++)
         {
-                umed = ulinenshift;
-                ulinenshift = shift(umed, FORWARD, mu);
+                wltem = wlnu_shift;
+                wlnu_shift = shift(wltem, FORWARD, mu);
         }
 	switch (pla_num)  //generate 4 plaquette used in the construction of F_\mu\nu
         {
-                case 1:plane_plaq_mn = ulinem*ulinenshift*adj(ulinemshift)*adj(ulinen);
+                case 1:plane_plaq_mn = wlmu*wlnu_shift*adj(wlmu_shift)*adj(wlnu);
                 break;
-                case 2:plane_plaq_mn = shift(ulinenshift*adj(ulinemshift)*adj(ulinen)*ulinem, BACKWARD, mu);
+                case 2:plane_plaq_mn = shift(wlnu_shift*adj(wlmu_shift)*adj(wlnu)*wlmu, BACKWARD, mu);
                 break;
-                case 3:plane_plaq_mn = shift(shift(adj(ulinemshift)*adj(ulinen)*ulinem*ulinenshift, BACKWARD, mu), BACKWARD, nu);
+                case 3:plane_plaq_mn = shift(shift(adj(wlmu_shift)*adj(wlnu)*wlmu*wlnu_shift, BACKWARD, mu), BACKWARD, nu);
                 break;
-                case 4:plane_plaq_mn = shift(adj(ulinen)*ulinem*ulinenshift*adj(ulinemshift), BACKWARD, nu);
+                case 4:plane_plaq_mn = shift(adj(wlnu)*wlmu*wlnu_shift*adj(wlmu_shift), BACKWARD, nu);
                 break;
         }
 	//plane_plaq_mn = ulinem*ulinenshift*adj(ulinemshift)*adj(ulinen);
 	return plane_plaq_mn;
     }
 
-    Double tr_plane_pla(int m, int n, LatticeColorMatrix plane_plaq)
+    /* The function is used to calculate the mean(real(trace())) of the plaquette.
+     * The input should be a matrix element of plane plaquette.
+     * The output is a matrix element of the mean(real(trace())) of the plaquette.
+     */ 
+    Double tr_plane_pla(LatticeColorMatrix plane_plaq)
     {
 	Double tr_plane_plaq;
 	tr_plane_plaq = sum(real(trace(plane_plaq)));
-	tr_plane_plaq /= Double(Layout::vol() * Nc);
+	tr_plane_plaq /= Double(Layout::vol() * Nc); //average on sites and colors
 	tr_plane_plaq = tr_plane_plaq; //symmetric
 	return tr_plane_plaq;
     }
 
-    multi1d<LatticeColorMatrix> Operator(int n, int z, multi2d<LatticeColorMatrix> F, LatticeColorMatrix u)
+    /* The function is used to construct the operators (both local and non-local operators). 
+     * The inputs are the wilson line length "len" and the direction "dir", gluon field F_\mu\nu, and the unit wilson link u
+     * The outputs are the 6 operators.
+     */ 
+    multi1d<LatticeColorMatrix> fun_Operator(int len, int dir, multi2d<LatticeColorMatrix> F, LatticeColorMatrix u)
     {
 	LatticeColorMatrix un;
 	multi2d<LatticeColorMatrix> Fn;
@@ -235,28 +248,62 @@ namespace Chroma
 	Op.resize(6);
 	Op = 0;
 
-	un = wilsonline(z, n, u);
+	un = wilsonline(dir, len, u); //calculate the wilson line
 
 	for(int mu = 0; mu < Nd; mu++)
         {
         	for(int nu = mu+1; nu < Nd; nu++)
                 {
-                	Fn[nu][mu] = field(z, n, F[nu][mu]);
+                	Fn[nu][mu] = field(dir, len, F[nu][mu]); //shift the F_\mu\nu
                         Fn[mu][nu] = -Fn[nu][mu];  //anti-symmetric
                 }
         }
-	
-	if(n==0)
+
+/*
+        LatticeColorMatrix um;
+	un = adj(un);
+        multi2d<LatticeColorMatrix> Fm;
+        Fm.resize(Nd,Nd);
+	for(int k=0;k<n; k++)
+	{
+		um = un;
+		un = shift(um, BACKWARD, z);
+	}
+	for(int mu = 0; mu < Nd; mu++)
+        {
+                for(int nu = mu+1; nu < Nd; nu++)
+                {
+			Fm[nu][mu] = F[nu][mu];
+                        for(int k=0;k<n; k++)
+			{
+				Fn[nu][mu] = shift(Fm[nu][mu], BACKWARD, z);
+				Fm[nu][mu] = Fn[nu][mu];
+			}
+                        Fn[mu][nu] = -Fn[nu][mu];  //anti-symmetric
+                }
+        }
+*/	
+
+	/* Operators definition
+ 	 * O(F_{\mu \nu},F^{\alpha \beta},len) = tr(F_{\mu \nu}(0)U(0,len)F_{\mu \nu}(len)U(0,len))
+ 	 * O_0 = O(F_{\mu t},F^{\mu t},len)-1/4 O(F_{\mu \nu},F^{\mu \mu},len)
+ 	 * O_1 = O(F_{\mu t},F^{\mu z},len)
+ 	 * O_2 = O(F_{\mu z},F^{\mu z},len)-1/4 O(F_{\mu \nu},F^{\mu \mu},len)
+ 	 * O_3 = O(F_{\mu z},F^{\mu z},len)
+ 	 * O_4 = O(F_{\mu t},F^{\mu t},len)
+ 	 * O_d = O(F_{t z},F^{t z},len)
+ 	 */ 	
+	if(len==0) //local operators
 	{
 		for(int i=0;i<4; i++)
                 {
 			Op[0] += F[3][i]*F[3][i];
-			Op[1] += F[3][i]*F[z][i];
-			Op[2] += F[z][i]*F[z][i];
-                	Op[3] += F[z][i]*F[z][i]; //local operator
+			Op[1] += F[3][i]*F[dir][i];
+			Op[2] += F[dir][i]*F[dir][i];
+                	Op[3] += F[dir][i]*F[dir][i];
 			Op[4] += F[3][i]*F[3][i];
-			if(i==z || i==3)
-			{ Op[5] += F[z][i]*F[z][i];}
+			if(i==3)
+			{ Op[5] += F[dir][i]*F[dir][i];}
                 }
 		for(int i=0;i<4; i++)
                 {
@@ -269,17 +316,17 @@ namespace Chroma
 
  
 	}
-	else
+	else //non-local
 	{
 		for(int i=0;i<4; i++)
                 {
                         Op[0] += F[3][i]*un*Fn[3][i]*adj(un);
-                        Op[1] += F[3][i]*un*Fn[z][i]*adj(un);
-                        Op[2] += F[z][i]*un*Fn[z][i]*adj(un);
-                        Op[3] += F[z][i]*un*Fn[z][i]*adj(un);
+                        Op[1] += F[3][i]*un*Fn[dir][i]*adj(un);
+                        Op[2] += F[dir][i]*un*Fn[dir][i]*adj(un);
+                        Op[3] += F[dir][i]*un*Fn[dir][i]*adj(un);
                         Op[4] += F[3][i]*un*Fn[3][i]*adj(un);
-                        if(i==z || i==3)
-                        { Op[5] += F[z][i]*un*Fn[z][i]*adj(un);}
+                        if(i==dir || i==3)
+                        { Op[5] += F[dir][i]*un*Fn[dir][i]*adj(un);}
                 }
                 for(int i=0;i<4; i++)
                 {
@@ -289,6 +336,27 @@ namespace Chroma
                                 Op[2] -= 0.5*F[j][i]*un*Fn[j][i]*adj(un);
                         }
                 }
+/*
+                for(int i=0;i<4; i++)
+                {
+                        Op[0] += Fn[3][i]*adj(un)*F[3][i]*un;
+                        Op[1] += Fn[3][i]*adj(un)*F[z][i]*un;
+                        Op[2] += Fn[z][i]*adj(un)*F[z][i]*un;
+                        Op[3] += Fn[z][i]*adj(un)*F[z][i]*un;
+                        Op[4] += Fn[3][i]*adj(un)*F[3][i]*un;
+                        if(i==z || i==3)
+                        { Op[5] += Fn[z][i]*adj(un)*F[z][i]*un;}
+                }
+                for(int i=0;i<4; i++)
+                {
+                        for(int j=0;j<i;j++)
+                        {
+                                Op[0] -= 0.5*Fn[j][i]*adj(un)*F[j][i]*un;
+                                Op[2] -= 0.5*Fn[j][i]*adj(un)*F[j][i]*un;
+                        }
+                }
+*/
+
 
 	}
 
@@ -323,7 +391,8 @@ namespace Chroma
 	//Get link matrix
 	multi1d<LatticeColorMatrix> u;
 	u = TheNamedObjMap::Instance().getData< multi1d<LatticeColorMatrix> >(params.named_obj.gauge_id);
-
+	
+	//chroma function to calculate the plaquette
 	Wloop(xml_out, "GMF_O_b", u);
 	//Create variables to store the plaquette and the average
 	//trace of the plaquette
@@ -341,11 +410,12 @@ namespace Chroma
 		plane_plaq[1][nu][mu] = plaquette(mu, nu, 1, 1, u[mu], u[nu], 2);
                 plane_plaq[2][nu][mu] = plaquette(mu, nu, 1, 1, u[mu], u[nu], 3);
                 plane_plaq[3][nu][mu] = plaquette(mu, nu, 1, 1, u[mu], u[nu], 4);
+		plane_plaq[0][mu][nu] = plane_plaq[0][nu][mu];
 	    }
 	}
         
-	multi2d<LatticeColorMatrix> plane_plaq_11, plane_plaq_12, plane_plaq_13, plane_plaq_14, plane_plaq_22, plane_plaq_32;
-        multi2d<Double> tr_plane_plaq_11, tr_plane_plaq_12, tr_plane_plaq_13, tr_plane_plaq_14, tr_plane_plaq_22, tr_plane_plaq_32;
+	multi2d<LatticeColorMatrix> plane_plaq_11, plane_plaq_12, plane_plaq_13, plane_plaq_14, plane_plaq_22, plane_plaq_32; //plane_plaq_{m}{n} represents the n*m plaquette
+        multi2d<Double> tr_plane_plaq_11, tr_plane_plaq_12, tr_plane_plaq_13, tr_plane_plaq_14, tr_plane_plaq_22, tr_plane_plaq_32; //The mean(trace(real of the plaquette
         plane_plaq_11.resize(Nd,Nd);
         plane_plaq_12.resize(Nd,Nd);
         plane_plaq_13.resize(Nd,Nd);
@@ -369,27 +439,22 @@ namespace Chroma
                         plane_plaq_14[nu][mu] = plaquette(mu, nu, 1, 4, u[mu], u[nu], 1);
                        	plane_plaq_22[nu][mu] = plaquette(mu, nu, 2, 2, u[mu], u[nu], 1);
                         plane_plaq_32[nu][mu] = plaquette(mu, nu, 3, 2, u[mu], u[nu], 1);
-			plane_plaq_11[nu][mu] = plane_plaq_11[mu][nu];
-			plane_plaq_12[nu][mu] = plane_plaq_12[mu][nu];
-                        plane_plaq_13[nu][mu] = plane_plaq_13[mu][nu];
-                        plane_plaq_14[nu][mu] = plane_plaq_14[mu][nu];
-                        plane_plaq_22[nu][mu] = plane_plaq_22[mu][nu];
-                        plane_plaq_32[nu][mu] = plane_plaq_32[mu][nu];
                 }
         }
 	for(int mu = 0; mu < Nd; mu++)
 	{
 		for(int nu = mu+1; nu < Nd; nu++)
 		{
-			tr_plane_plaq_11[mu][nu] = tr_plane_pla(mu, nu, plane_plaq_11[nu][mu]); //symmetric
-                        tr_plane_plaq_12[mu][nu] = tr_plane_pla(mu, nu, plane_plaq_12[nu][mu]); //symmetric
-                        tr_plane_plaq_13[mu][nu] = tr_plane_pla(mu, nu, plane_plaq_13[nu][mu]); //symmetric
-                        tr_plane_plaq_14[mu][nu] = tr_plane_pla(mu, nu, plane_plaq_14[nu][mu]); //symmetric
-                        tr_plane_plaq_22[mu][nu] = tr_plane_pla(mu, nu, plane_plaq_22[nu][mu]); //symmetric
-                        tr_plane_plaq_32[mu][nu] = tr_plane_pla(mu, nu, plane_plaq_32[nu][mu]); //symmetric
+			tr_plane_plaq_11[mu][nu] = tr_plane_pla(plane_plaq_11[nu][mu]);
+                        tr_plane_plaq_12[mu][nu] = tr_plane_pla(plane_plaq_12[nu][mu]);
+                        tr_plane_plaq_13[mu][nu] = tr_plane_pla(plane_plaq_13[nu][mu]);
+                        tr_plane_plaq_14[mu][nu] = tr_plane_pla(plane_plaq_14[nu][mu]);
+                        tr_plane_plaq_22[mu][nu] = tr_plane_pla(plane_plaq_22[nu][mu]);
+                        tr_plane_plaq_32[mu][nu] = tr_plane_pla(plane_plaq_32[nu][mu]);
 		}
 	}	
-
+	
+	//Pirnt the mean(trace(real of the plaquette.
         for(int mu = 0; mu < Nd; mu++)
         {
         	for(int nu = mu+1; nu < Nd; nu++)
@@ -444,8 +509,8 @@ namespace Chroma
                 }
         }
 
-
-	for(int z = 0; z < 3; z++)
+	//loop over direction 0,1,2
+	for(int dir = 0; dir < 3; dir++)
         {
                 QDPIO::cout << "Finding F" << std::endl;
                 int mn = 6; //maximum wilson length
@@ -468,7 +533,9 @@ namespace Chroma
                         F[nu][mu] *= 1/8.0;
                         F[mu][nu]= -F[nu][mu]; //anti-symmetric
                         }
-                 }
+                }
+		
+		// Obtain the F_21 at t=8, y=12, z=12 along x direction
                 std::vector<Double> VecFmnre, VecFmnim;
                 for(int x = 0; x < Layout::lattSize()[0]; x++)
                 {
@@ -485,20 +552,21 @@ namespace Chroma
 			VecFmnim.push_back(fmnim);
                 }
 
+		// Print the F_\mu\nu at t=8, y=12, z=12 along x direction
                 for(int x = 0; x < Layout::lattSize()[0]; x++)
                 {
-                        QDPIO::cout <<"reF21   "<< x << "   " << VecFmnre.at(x) << "   " << VecFmnim.at(x) << std::endl;
+                        QDPIO::cout <<"F21   "<< x << "   " << VecFmnre.at(x) << "   " << VecFmnim.at(x) << std::endl;
 
                 }
 
-                std::vector<Double> VecFmeanre, VecFmeanim;
+		// Obtain and print the sum(trace( of F_\mu\nu to check the anti-symmetric.
                 for(int t = 0; t < Layout::lattSize()[3]; t++)
                 {
-                	multi2d<Double> Fmeanre, Fmeanim;
-			Fmeanre.resize(Nd,Nd);
-			Fmeanim.resize(Nd,Nd);
-			Fmeanre = 0;
-                        Fmeanim = 0;
+                	multi2d<Double> F_sumre, F_sumim; //real part and imaginary part of the sum(trace(F_\mu\nu))
+			F_sumre.resize(Nd,Nd);
+			F_sumim.resize(Nd,Nd);
+			F_sumre = 0;
+                        F_sumim = 0;
                  	multi1d<int> tCoords;
                         tCoords.resize(Nd);
                         tCoords[3] = t;
@@ -510,13 +578,13 @@ namespace Chroma
                           {
 			  	tCoords[0] = x;
 				tCoords[1] = y;
-				tCoords[2] = z;
+				tCoords[2] = Z;
 				for(int mu = 0; mu < Nd; mu++)
                 		{
                         	 for(int nu = 0; nu < Nd; nu++)
                         	 {
-					Fmeanre[mu][nu] += real(trace(peekSite(F[mu][nu], tCoords)));
-					Fmeanim[mu][nu] += imag(trace(peekSite(F[mu][nu], tCoords)));
+					F_sumre[mu][nu] += real(trace(peekSite(F[mu][nu], tCoords)));
+					F_sumim[mu][nu] += imag(trace(peekSite(F[mu][nu], tCoords)));
 				 }
 				}	
 			  }	
@@ -526,17 +594,18 @@ namespace Chroma
                         {
                         	for(int nu = 0; nu < Nd; nu++)
                         	{
-					QDPIO::cout <<"Fmean   "<< t << "   "<< mu << "   " << nu << "   "  << Fmeanre[mu][nu] << "   " << Fmeanim[mu][nu] << std::endl;
+					QDPIO::cout <<"F   "<< t << "   "<< mu << "   " << nu << "   "  << F_sumre[mu][nu] << "   " << F_sumim[mu][nu] << std::endl;
 				}
 			}
           	}
-
-		for(int n = 0; n < mn; n++)
+		// loop over the wilson line length len
+		for(int len = 0; len < mn; len++)
         	{
 			multi1d<LatticeColorMatrix> Op;
 			Op.resize(6);
 			Op = 0;
-			Op = Operator(n, z, F, u[z]);
+			Op = fun_Operator(len, dir, F, u[dir]); //Obtain the operators
+			//Calculate and print out the real(trace of the operators
 			for(int t = 0; t < Layout::lattSize()[3]; t++)
                         {
                                 multi1d<Double> op;
@@ -557,15 +626,15 @@ namespace Chroma
                                                 	op[i] += real(trace(peekSite(Op[i], tCoords)));
 						}
 					}
-				QDPIO::cout <<"Op   "<< z << "  " << n <<"  "<< t <<"  "<< op[0] <<"  "<< op[1] <<"  "<< op[2] <<"  "<< op[3] <<"  "<< op[4]<<"  "<< op[5]<< std::endl;
+				QDPIO::cout <<"Op   "<< dir << "  " << len <<"  "<< t <<"  "<< op[0] <<"  "<< op[1] <<"  "<< op[2] <<"  "<< op[3] <<"  "<< op[4]<<"  "<< op[5]<< std::endl;
 				
-			}
-		}
+			}//end of t loop
+		}//end of len loop
         
 
 
 
-	}
+	}//end of dir loop
 
 
     } 
