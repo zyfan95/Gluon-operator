@@ -255,7 +255,8 @@ namespace Chroma
         	for(int nu = mu+1; nu < Nd; nu++)
                 {
                 	Fn[nu][mu] = field(dir, len, F[nu][mu]); //shift the F_\mu\nu
-                        Fn[mu][nu] = -Fn[nu][mu];  //anti-symmetric
+                        //Fn[mu][nu] = Fn[nu][mu];  //symmetric
+			Fn[mu][nu] = -Fn[nu][mu];  //anti-symmetric
                 }
         }
 
@@ -390,8 +391,7 @@ namespace Chroma
 	
 	//Get link matrix
 	multi1d<LatticeColorMatrix> u;
-	u = TheNamedObjMap::Instance().getData< multi1d<LatticeColorMatrix> >(params.named_obj.gauge_id);
-	
+	u = TheNamedObjMap::Instance().getData< multi1d<LatticeColorMatrix> >(params.named_obj.gauge_id);	
 	//chroma function to calculate the plaquette
 	Wloop(xml_out, "GMF_O_b", u);
 	//Create variables to store the plaquette and the average
@@ -410,9 +410,41 @@ namespace Chroma
 		plane_plaq[1][nu][mu] = plaquette(mu, nu, 1, 1, u[mu], u[nu], 2);
                 plane_plaq[2][nu][mu] = plaquette(mu, nu, 1, 1, u[mu], u[nu], 3);
                 plane_plaq[3][nu][mu] = plaquette(mu, nu, 1, 1, u[mu], u[nu], 4);
-		plane_plaq[0][mu][nu] = plane_plaq[0][nu][mu];
+		//plane_plaq[0][mu][nu] = plane_plaq[0][nu][mu];
 	    }
 	}
+
+/*
+        for(int x = 0; x < Layout::lattSize()[0]; x++)
+          for(int y = 0; y < Layout::lattSize()[1]; y++)
+	     for(int Z = 0; Z < Layout::lattSize()[2]; Z++)
+                for(int t = 0; t < Layout::lattSize()[3]; t++)
+                {
+		for(int mu = 0; mu < Nd; mu++)
+        	{
+            	for(int nu = 0; nu < Nd; nu++)
+            	{
+                        Double plaq0re, plaq0im, plaq1re, plaq1im, plaq2re, plaq2im, plaq3re, plaq3im;
+                        multi1d<int> fCoords;
+                        fCoords.resize(Nd);
+                        fCoords[3] = t;
+                        fCoords[0] = x;
+                        fCoords[1] = y;
+                        fCoords[2] = Z;
+                        plaq0re = real(trace(peekSite(plane_plaq[0][mu][nu], fCoords)));
+                        plaq0im = imag(trace(peekSite(plane_plaq[0][mu][nu], fCoords)));
+                        plaq1re = real(trace(peekSite(plane_plaq[1][mu][nu], fCoords)));
+                        plaq1im = imag(trace(peekSite(plane_plaq[1][mu][nu], fCoords)));
+                        plaq2re = real(trace(peekSite(plane_plaq[2][mu][nu], fCoords)));
+                        plaq2im = imag(trace(peekSite(plane_plaq[2][mu][nu], fCoords)));
+                        plaq3re = real(trace(peekSite(plane_plaq[3][mu][nu], fCoords)));
+                        plaq3im = imag(trace(peekSite(plane_plaq[3][mu][nu], fCoords)));
+			QDPIO::cout <<"plaq   "<< x << "   "<< y << "   "<< Z << "   "<< t << "   "<< mu << "   "<< nu << "   " << plaq0re << "   " << plaq0im<< "   " << plaq1re << "   " << plaq1im<< "   " << plaq2re << "   " << plaq2im<< "   " << plaq3re << "   " << plaq3im << std::endl;
+                }
+		}
+		}
+*/
+
         
 	multi2d<LatticeColorMatrix> plane_plaq_11, plane_plaq_12, plane_plaq_13, plane_plaq_14, plane_plaq_22, plane_plaq_32; //plane_plaq_{m}{n} represents the n*m plaquette
         multi2d<Double> tr_plane_plaq_11, tr_plane_plaq_12, tr_plane_plaq_13, tr_plane_plaq_14, tr_plane_plaq_22, tr_plane_plaq_32; //The mean(trace(real of the plaquette
@@ -513,7 +545,7 @@ namespace Chroma
 	for(int dir = 0; dir < 3; dir++)
         {
                 QDPIO::cout << "Finding F" << std::endl;
-                int mn = 6; //maximum wilson length
+                int mn = 5; //maximum wilson length
                 /** Find F_{n,munu} **/
                 multi2d<LatticeColorMatrix> F, Fn;
                 F.resize(Nd,Nd);
@@ -531,9 +563,82 @@ namespace Chroma
                                 F[nu][mu] += plane_plaq[i][nu][mu] - adj(plane_plaq[i][nu][mu]);
                         }
                         F[nu][mu] *= 1/8.0;
-                        F[mu][nu]= -F[nu][mu]; //anti-symmetric
+                        //F[mu][nu]= F[nu][mu]; //symmetric
+			F[mu][nu]= -F[nu][mu]; //anti-symmetric
                         }
                 }
+
+
+
+                for(int len = 0; len < mn; len++)
+                {
+
+                	ColorMatrix wl_forward, wl_backward, wl_tem;
+                        multi1d<LatticeColorMatrix> Op;
+                        Op.resize(6);
+                        Op = 0;
+                        for(int t = 0; t < Layout::lattSize()[3]; t++)
+                        {
+                                multi1d<Double> op;
+                                op.resize(6);
+                                op = 0;
+                                multi1d<int> tCoords, tCoordsl;
+				int t_tem;
+                                tCoords.resize(Nd);
+                                tCoordsl.resize(Nd);
+                                tCoords[3] = t;
+                                tCoordsl[3] = t;
+                                for(int x = 0; x < Layout::lattSize()[0];x++)
+                                  for(int y = 0; y < Layout::lattSize()[1];y++)
+                                    for(int Z = 0; Z < Layout::lattSize()[2];Z++)
+                                        {
+                                                tCoordsl[0] = x;
+                                                tCoordsl[1] = y;
+                                                tCoordsl[2] = Z;
+                                                tCoords[0] = x;
+                                                tCoords[1] = y;
+                                                tCoords[2] = Z;
+						wl_forward = 1;
+						wl_backward = 1;
+						
+						for(int k = 0; k < len; k++)
+						{
+							wl_tem = wl_forward;
+							wl_forward = wl_tem*peekSite(u[dir], tCoords);
+							wl_tem = wl_backward;
+							wl_backward = peekSite(adj(u[dir]), tCoords)*wl_tem;
+                                                        t_tem = tCoords[dir];
+                                                        tCoords[dir] = (t_tem+1)%(Layout::lattSize()[dir]);
+						
+						}
+						
+                                                        for(int i=0;i<4; i++)
+                                                        {
+								op[0] += real(trace(peekSite(F[3][i], tCoordsl)*wl_forward*peekSite(F[3][i], tCoords)*wl_backward));
+                                                                op[1] += real(trace(peekSite(F[3][i], tCoordsl)*wl_forward*peekSite(F[dir][i], tCoords)*wl_backward));
+								op[2] += real(trace(peekSite(F[dir][i], tCoordsl)*wl_forward*peekSite(F[dir][i], tCoords)*wl_backward));
+                                                                op[3] += real(trace(peekSite(F[dir][i], tCoordsl)*wl_forward*peekSite(F[dir][i], tCoords)*wl_backward));
+                                                                op[4] += real(trace(peekSite(F[3][i], tCoordsl)*wl_forward*peekSite(F[3][i], tCoords)*wl_backward));
+								if(i==dir || i==3)
+								{op[5] += real(trace(peekSite(F[dir][i], tCoordsl)*wl_forward*peekSite(F[dir][i], tCoords)*wl_backward));}
+                                                        }
+                                                        for(int i=0;i<4; i++)
+                                                        {
+								for(int j=0;j<i;j++)
+								{
+									op[0] -= 0.5*real(trace(peekSite(F[j][i], tCoordsl)*wl_forward*peekSite(F[j][i], tCoords)*wl_backward));
+									op[2] -= 0.5*real(trace(peekSite(F[j][i], tCoordsl)*wl_forward*peekSite(F[j][i], tCoords)*wl_backward));
+								}
+							}
+
+                                        }
+                                QDPIO::cout <<"Op   "<< dir << "  " << len <<"  "<< t <<"  "<< op[0] <<"  "<< op[1] <<"  "<< op[2] <<"  "<< op[3] <<"  "<< op[4]<<"  "<< op[5]<< std::endl;
+
+                        }//end of t loop
+		}//end of len loop
+                
+
+
 		
 		// Obtain the F_21 at t=8, y=12, z=12 along x direction
                 std::vector<Double> VecFmnre, VecFmnim;
@@ -630,7 +735,49 @@ namespace Chroma
 				
 			}//end of t loop
 		}//end of len loop
-        
+       /* 
+                for(int len = 1; len < 2; len++)
+                {
+                        multi1d<LatticeColorMatrix> Op;
+                        Op.resize(6);
+                        Op = 0;
+                        for(int t = 0; t < Layout::lattSize()[3]; t++)
+                        {
+                                multi1d<Double> op;
+                                op.resize(6);
+                                op = 0;
+                                multi1d<int> tCoords, tCoords1, tCoords2;
+                                tCoords.resize(Nd);
+				tCoords1.resize(Nd);
+				tCoords2.resize(Nd);
+                                tCoords[3] = t;
+				tCoords1[3] = t;
+				tCoords2[3] = t;
+                                for(int x = 0; x < Layout::lattSize()[0];x++)
+                                  for(int y = 0; y < Layout::lattSize()[1];y++)
+                                    for(int Z = 0; Z < Layout::lattSize()[2];Z++)
+                                        {
+                                                tCoords[0] = x;
+                                                tCoords[1] = y;
+                                                tCoords[2] = Z;
+						tCoords1[0] = (x+1)%(Layout::lattSize()[0]);
+                                                tCoords1[1] = y;
+                                                tCoords1[2] = Z;
+                                                tCoords2[0] = (x+2)%(Layout::lattSize()[0]);
+                                                tCoords2[1] = y;
+                                                tCoords2[2] = Z;
+                                                
+                					for(int i=0;i<4; i++)
+                					{
+                        					op[1] += real(trace(peekSite(F[3][i], tCoords)*peekSite(u[0], tCoords)*peekSite(F[0][i], tCoords1)*peekSite(adj(u[0]), tCoords)));
+								op[2] += real(trace(peekSite(F[3][i], tCoords)*peekSite(u[0], tCoords)*peekSite(u[0], tCoords1)*peekSite(F[0][i], tCoords2)*peekSite(adj(u[0]), tCoords1)*peekSite(adj(u[0]), tCoords)));;
+               				 		}
+                                        }
+                                QDPIO::cout <<"Op   "<< 0 << "  " << len <<"  "<< t <<"  "<< op[0] <<"  "<< op[1] <<"  "<< op[2] <<"  "<< op[3] <<"  "<< op[4]<<"  "<< op[5]<< std::endl;
+
+                        }//end of t loop
+                }//end of len loop
+	*/
 
 
 
