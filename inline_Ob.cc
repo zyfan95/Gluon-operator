@@ -234,6 +234,90 @@ namespace Chroma
 	return tr_plane_plaq;
     }
 
+
+    /* The function is used to construct the O_3 operator (both local and non-local operator) and its 16 components.
+     * The inputs are the wilson line length "len" and the direction "dir", 4 gluon field components (plaq[i]-adj(plaq[i])), and the unit wilson link u
+     * The outputs are the O_3 16 componets at 3 direction (x,y,t if dir=z) and O_3 itself.
+     */
+
+    multi3d<LatticeColorMatrix> fun_Operator3(int len, int dir, multi3d<LatticeColorMatrix> f0, LatticeColorMatrix u)
+    {
+        LatticeColorMatrix un;
+        multi3d<LatticeColorMatrix> fn;
+        fn.resize(4,Nd,Nd);
+        fn = 0;
+        multi3d<LatticeColorMatrix> Op3;
+        Op3.resize(5,4,4); //The first index is different direction in O_3 definetion \mu (O_3 = O(F_{\mu z},F^{\mu z},len)). The following two are the 4 components of F_\mu\nu 
+        Op3 = 0;
+	LatticeColorMatrix Op_tem;
+	Op_tem =0;
+
+        un = wilsonline(dir, len, u); //calculate the wilson line
+
+        for(int mu = 0; mu < Nd; mu++)
+        {
+                for(int nu = mu+1; nu < Nd; nu++)
+                {
+			for(int i =0; i < 4; i++)
+			{
+                        	fn[i][nu][mu] = field(dir, len, f0[i][nu][mu]); //shift the F_\mu\nu
+                        	fn[i][mu][nu] = -fn[i][nu][mu];  //anti-symmetric
+			}
+                }
+        }
+
+        if(len==0) //local operators
+        {
+                for(int i=0;i<4; i++)
+                {
+                        for(int j=0;j<4;j++)
+			{
+				for(int k=0;k<4;k++)
+				{
+					Op3[k][i][j] = f0[i][dir][k]*f0[j][dir][k]; //O_3 components
+					Op_tem += f0[i][dir][k]*f0[j][dir][k];
+				}
+			}
+		}
+                for(int i=0;i<4; i++)
+                {
+                        for(int j=0;j<4;j++)
+                        {
+                 		Op3[4][i][j]=Op_tem;  //O_3
+			}
+		}
+	}
+	else
+	{
+                for(int i=0;i<4; i++)
+                {
+                        for(int j=0;j<4;j++)
+                        {
+                                for(int k=0;k<4;k++)
+                                {
+                                        Op3[k][i][j] = f0[i][dir][k]*un*fn[j][dir][k]*adj(un);
+					Op_tem += f0[i][dir][k]*un*fn[j][dir][k]*adj(un);
+                                }
+                        }
+                }
+		for(int i=0;i<4; i++)
+                {
+                        for(int j=0;j<4;j++)
+                        {
+                                Op3[4][i][j]=Op_tem;
+                        }
+                }
+
+
+	}
+
+	return Op3;
+
+
+
+    }
+
+
     /* The function is used to construct the operators (both local and non-local operators). 
      * The inputs are the wilson line length "len" and the direction "dir", gluon field F_\mu\nu, and the unit wilson link u
      * The outputs are the 6 operators.
@@ -245,7 +329,7 @@ namespace Chroma
 	Fn.resize(Nd,Nd);
 	Fn = 0;
 	multi1d<LatticeColorMatrix> Op;
-	Op.resize(6);
+	Op.resize(10);
 	Op = 0;
 
 	un = wilsonline(dir, len, u); //calculate the wilson line
@@ -293,7 +377,22 @@ namespace Chroma
  	 * O_3 = O(F_{\mu z},F^{\mu z},len)
  	 * O_4 = O(F_{\mu t},F^{\mu t},len)
  	 * O_d = O(F_{t z},F^{t z},len)
- 	 */ 	
+ 	 */
+
+/*      //This is a test on the wrong combination of the links 
+        LatticeColorMatrix um, ushift;
+        un = u;
+	ushift = u;
+        multi2d<LatticeColorMatrix> Fm;
+        Fm.resize(Nd,Nd);
+        for(int k=1;k<len; k++)
+        {
+                um = ushift;
+		ushift = shift(um, FORWARD, dir);
+		um = un;
+                un = ushift*um;
+        }
+*/	
 	if(len==0) //local operators
 	{
 		for(int i=0;i<4; i++)
@@ -303,7 +402,7 @@ namespace Chroma
 			Op[2] += F[dir][i]*F[dir][i];
                 	Op[3] += F[dir][i]*F[dir][i];
 			Op[4] += F[3][i]*F[3][i];
-			if(i==3)
+			if(i==3 || i==3)
 			{ Op[5] += F[dir][i]*F[dir][i];}
                 }
 		for(int i=0;i<4; i++)
@@ -314,11 +413,17 @@ namespace Chroma
                                 Op[2] -= 0.5*F[j][i]*F[j][i];
                         }
                	}
+		Op[6] = F[dir][0]*F[dir][0];
+		Op[7] = F[dir][1]*F[dir][1];
+		Op[8] = F[dir][2]*F[dir][2];
+		Op[9] = F[dir][3]*F[dir][3];
 
  
 	}
+
 	else //non-local
 	{
+
 		for(int i=0;i<4; i++)
                 {
                         Op[0] += F[3][i]*un*Fn[3][i]*adj(un);
@@ -337,6 +442,10 @@ namespace Chroma
                                 Op[2] -= 0.5*F[j][i]*un*Fn[j][i]*adj(un);
                         }
                 }
+		Op[6] += F[dir][0]*un*Fn[dir][0]*adj(un);
+                Op[7] += F[dir][1]*un*Fn[dir][1]*adj(un);
+                Op[8] += F[dir][2]*un*Fn[dir][2]*adj(un);
+                Op[9] += F[dir][3]*un*Fn[dir][3]*adj(un);		
 /*
                 for(int i=0;i<4; i++)
                 {
@@ -440,11 +549,20 @@ namespace Chroma
                         plaq3re = real(trace(peekSite(plane_plaq[3][mu][nu], fCoords)));
                         plaq3im = imag(trace(peekSite(plane_plaq[3][mu][nu], fCoords)));
 			QDPIO::cout <<"plaq   "<< x << "   "<< y << "   "<< Z << "   "<< t << "   "<< mu << "   "<< nu << "   " << plaq0re << "   " << plaq0im<< "   " << plaq1re << "   " << plaq1im<< "   " << plaq2re << "   " << plaq2im<< "   " << plaq3re << "   " << plaq3im << std::endl;
+                        plaq0re = real(trace(peekSite(adj(plane_plaq[0][mu][nu]), fCoords)));
+                        plaq0im = imag(trace(peekSite(adj(plane_plaq[0][mu][nu]), fCoords)));
+                        plaq1re = real(trace(peekSite(adj(plane_plaq[1][mu][nu]), fCoords)));
+                        plaq1im = imag(trace(peekSite(adj(plane_plaq[1][mu][nu]), fCoords)));
+                        plaq2re = real(trace(peekSite(adj(plane_plaq[2][mu][nu]), fCoords)));
+                        plaq2im = imag(trace(peekSite(adj(plane_plaq[2][mu][nu]), fCoords)));
+                        plaq3re = real(trace(peekSite(adj(plane_plaq[3][mu][nu]), fCoords)));
+                        plaq3im = imag(trace(peekSite(adj(plane_plaq[3][mu][nu]), fCoords)));
+                        QDPIO::cout <<"adj(plaq)   "<< x << "   "<< y << "   "<< Z << "   "<< t << "   "<< mu << "   "<< nu << "   " << plaq0re << "   " << plaq0im<< "   " << plaq1re << "   " << plaq1im<< "   " << plaq2re << "   " << plaq2im<< "   " << plaq3re << "   " << plaq3im << std::endl;
                 }
 		}
 		}
-*/
 
+*/
         
 	multi2d<LatticeColorMatrix> plane_plaq_11, plane_plaq_12, plane_plaq_13, plane_plaq_14, plane_plaq_22, plane_plaq_32; //plane_plaq_{m}{n} represents the n*m plaquette
         multi2d<Double> tr_plane_plaq_11, tr_plane_plaq_12, tr_plane_plaq_13, tr_plane_plaq_14, tr_plane_plaq_22, tr_plane_plaq_32; //The mean(trace(real of the plaquette
@@ -568,8 +686,146 @@ namespace Chroma
                         }
                 }
 
+                multi3d<LatticeColorMatrix> f0;
+                f0.resize(4,Nd,Nd);
+                
+                f0 = 0;
+                
+                for(int mu = 0; mu < Nd; mu++)
+                {
+                        for(int nu = mu+1; nu < Nd; nu++)
+                        {
+			for(int i = 0; i < 4; i++)
+                        {
+                        f0[i][nu][mu] = plane_plaq[i][nu][mu] - adj(plane_plaq[i][nu][mu]);
+			f0[i][nu][mu] *= 1/8.0;
+			f0[i][mu][nu] = -f0[i][nu][mu];
+			}
+                   	}
+                }
+		
+		
+		multi3d<LatticeColorMatrix> OP3;
+		OP3.resize(5,4,4);
+		OP3 = 0;
+                for(int dir=0; dir<3; dir++)
+		{
+			for(int len=0; len<5; len++)
+			{
+				OP3 = fun_Operator3(len, dir, f0, u[dir]);
+                        for(int t = 0; t < Layout::lattSize()[3]; t++)
+                        {
+				multi3d<Double> op_3;
+				op_3.resize(5,4,4);
+				op_3=0;
+                                multi1d<int> tCoords;
+                                tCoords.resize(Nd);
+                                tCoords[3] = t;
+                                for(int x = 0; x < Layout::lattSize()[0];x++)
+                                  for(int y = 0; y < Layout::lattSize()[1];y++)
+                                    for(int Z = 0; Z < Layout::lattSize()[2];Z++)
+                                        {
+                                                tCoords[0] = x;
+                                                tCoords[1] = y;
+                                                tCoords[2] = Z;
+						for(int k = 0; k<5;k++)
+						for(int i = 0; i<4;i++)
+						for(int j = 0; j<4;j++)
+						{
+                                                        op_3[k][i][j] += real(trace(peekSite(OP3[k][i][j], tCoords)));
+						}
 
 
+                                        }
+				for(int k = 0; k<5;k++)
+				for(int i = 0; i<4;i++)
+				for(int j = 0; j<4;j++)
+				{
+                                	QDPIO::cout <<"Op0123   dir="<< dir << "  len="<< len <<"  t="<<  t <<"  subdir="<< k <<"  p1="<< i <<"  p2="<< j <<"  "<< op_3[k][i][j] <<std::endl;
+				}
+			}
+
+			}
+		}
+		
+
+/*
+
+		LatticeColorMatrix Op0, Op1, Op2, Op3, Op4, Op5, Op6, Op7, Op8, Op9, Op10, Op11;
+                
+                
+			Op0 = f0[0][dir][3]*f0[0][dir][3];
+                        Op1 = f0[0][dir][3]*f0[1][dir][3];
+                        Op2 = f0[0][dir][3]*f0[2][dir][3];
+                        Op3 = f0[0][dir][3]*f0[3][dir][3];
+			//Op4 = shift(f0[1][dir][3],FORWARD,dir)*shift(f0[1][dir][3],FORWARD,dir);
+			//Op5 = f0[0][dir][3]*shift(f0[1][dir][3],FORWARD,dir);
+			Op4 = f0[0][dir][3]*u[dir]*shift(u[dir],FORWARD,dir)*shift(shift(f0[0][dir][3],FORWARD,dir),FORWARD,dir)*adj(shift(u[dir],FORWARD,dir))*adj(u[dir]);
+                        Op5 = f0[0][dir][3]*u[dir]*shift(u[dir],FORWARD,dir)*shift(shift(f0[1][dir][3],FORWARD,dir),FORWARD,dir)*adj(shift(u[dir],FORWARD,dir))*adj(u[dir]);
+                        Op6 = f0[0][dir][3]*u[dir]*shift(u[dir],FORWARD,dir)*shift(shift(f0[2][dir][3],FORWARD,dir),FORWARD,dir)*adj(shift(u[dir],FORWARD,dir))*adj(u[dir]);
+                        Op7 = f0[0][dir][3]*u[dir]*shift(u[dir],FORWARD,dir)*shift(shift(f0[3][dir][3],FORWARD,dir),FORWARD,dir)*adj(shift(u[dir],FORWARD,dir))*adj(u[dir]);
+                        Op8 = f0[2][dir][3]*u[dir]*shift(u[dir],FORWARD,dir)*shift(shift(f0[0][dir][3],FORWARD,dir),FORWARD,dir)*adj(shift(u[dir],FORWARD,dir))*adj(u[dir]);
+                        Op9 = f0[2][dir][3]*u[dir]*shift(u[dir],FORWARD,dir)*shift(shift(f0[1][dir][3],FORWARD,dir),FORWARD,dir)*adj(shift(u[dir],FORWARD,dir))*adj(u[dir]);
+                        Op10 = f0[2][dir][3]*u[dir]*shift(u[dir],FORWARD,dir)*shift(shift(f0[2][dir][3],FORWARD,dir),FORWARD,dir)*adj(shift(u[dir],FORWARD,dir))*adj(u[dir]);
+                        Op11 = f0[2][dir][3]*u[dir]*shift(u[dir],FORWARD,dir)*shift(shift(f0[3][dir][3],FORWARD,dir),FORWARD,dir)*adj(shift(u[dir],FORWARD,dir))*adj(u[dir]);
+
+
+
+
+
+                        for(int t = 0; t < Layout::lattSize()[3]; t++)
+                        {
+                                Double op0, op1, op2, op3, op4, op5, op6, op7, op8, op9, op10, op11;
+                                
+                                op0=0;
+                                op1=0;
+                                op2=0;
+                                op3=0;
+                                op4=0;
+                                op5=0;
+                                op6=0;
+                                op7=0;
+				op8=0;
+				op9=0;
+				op10=0;
+				op11=0;
+                                
+                                multi1d<int> tCoords;
+                                tCoords.resize(Nd);
+                                tCoords[3] = t;
+                                for(int x = 0; x < Layout::lattSize()[0];x++)
+                                  for(int y = 0; y < Layout::lattSize()[1];y++)
+                                    for(int Z = 0; Z < Layout::lattSize()[2];Z++)
+                                        {
+                                                tCoords[0] = x;
+                                                tCoords[1] = y;
+                                                tCoords[2] = Z;
+                                                
+                                                        op0 += real(trace(peekSite(Op0, tCoords)));
+                                                        op1 += real(trace(peekSite(Op1, tCoords)));
+                                                        op2 += real(trace(peekSite(Op2, tCoords)));
+                                                        op3 += real(trace(peekSite(Op3, tCoords)));
+                                                        op4 += real(trace(peekSite(Op4, tCoords)));
+                                                        op5 += real(trace(peekSite(Op5, tCoords)));
+                                                        op6 += real(trace(peekSite(Op6, tCoords)));
+                                                        op7 += real(trace(peekSite(Op7, tCoords)));
+                                                        op8 += real(trace(peekSite(Op8, tCoords)));
+                                                        op9 += real(trace(peekSite(Op9, tCoords)));
+                                                        op10 += real(trace(peekSite(Op10, tCoords)));
+                                                        op11 += real(trace(peekSite(Op11, tCoords)));
+
+
+                                                
+                                        }
+                                QDPIO::cout <<"Op0123   "<< dir << "    "<< t <<"  "<< op0 <<"  "<< op1 <<"  "<< op2 <<"  "<< op3 <<"  "<< op4<<"  "<< op5<<"  "<< op6<<"  "<< op7<<"  "<< op8<<"  "<< op9<<"  "<< op10<<"  "<< op11<<std::endl;
+
+                        }//end of t loop
+
+*/
+
+
+		
+/*
                 for(int len = 0; len < mn; len++)
                 {
 
@@ -637,7 +893,7 @@ namespace Chroma
                         }//end of t loop
 		}//end of len loop
                 
-
+*/
 
 		
 		// Obtain the F_21 at t=8, y=12, z=12 along x direction
@@ -707,14 +963,14 @@ namespace Chroma
 		for(int len = 0; len < mn; len++)
         	{
 			multi1d<LatticeColorMatrix> Op;
-			Op.resize(6);
+			Op.resize(10);
 			Op = 0;
 			Op = fun_Operator(len, dir, F, u[dir]); //Obtain the operators
 			//Calculate and print out the real(trace of the operators
 			for(int t = 0; t < Layout::lattSize()[3]; t++)
                         {
                                 multi1d<Double> op;
-				op.resize(6);
+				op.resize(10);
 				op = 0;
                                 multi1d<int> tCoords;
                                 tCoords.resize(Nd);
@@ -726,12 +982,12 @@ namespace Chroma
                                                 tCoords[0] = x;
                                                 tCoords[1] = y;
                                                 tCoords[2] = Z;
-						for(int i = 0; i < 6;i++)
+						for(int i = 0; i < 10;i++)
 						{
                                                 	op[i] += real(trace(peekSite(Op[i], tCoords)));
 						}
 					}
-				QDPIO::cout <<"Op   "<< dir << "  " << len <<"  "<< t <<"  "<< op[0] <<"  "<< op[1] <<"  "<< op[2] <<"  "<< op[3] <<"  "<< op[4]<<"  "<< op[5]<< std::endl;
+				QDPIO::cout <<"Op   "<< dir << "  " << len <<"  "<< t <<"  "<< op[0] <<"  "<< op[1] <<"  "<< op[2] <<"  "<< op[3] <<"  "<< op[4]<<"  "<< op[5]<< "  "<< op[6]<<"  "<< op[7]<<"  "<< op[8]<<"  "<< op[9]<<std::endl;
 				
 			}//end of t loop
 		}//end of len loop
