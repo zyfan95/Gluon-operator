@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<chroma>
+  <Param>
+    <InlineMeasurements>
+
+      <!-- Do measurement -->
+      <elem>
+        <Name>LINK_SMEAR</Name>
+        <Frequency>1</Frequency>
+        <Param>
+          <version>5</version>
+          <LinkSmearingType>HYP_SMEAR</LinkSmearingType>
+          <alpha1>0.75</alpha1>
+          <alpha2>0.6</alpha2>
+          <alpha3>0.3</alpha3>
+          <num_smear>5</num_smear>
+          <no_smear_dir>-1</no_smear_dir>
+          <BlkMax>100</BlkMax>
+        <BlkAccu>1.0e-7</BlkAccu>
+        </Param>
+        <NamedObject>
+          <gauge_id>default_gauge_field</gauge_id>
+          <linksmear_id>hyp_gauge_field</linksmear_id>
+        </NamedObject>
+      </elem>
+
+
+      <elem>
+	<Name>GluonOB</Name>
+	<Frequency>1</Frequency>
+
+	<Param>
+	  <version>2</version>
+	</Param>
+	<NamedObject>
+	  <gauge_id>hyp_gauge_field</gauge_id>
+	</NamedObject>
+      </elem>
+
+
+
+</InlineMeasurements>
+
+    <nrow>24 24 24 64</nrow>
+    
+  </Param>
+  
+  <Cfg>
+    <cfg_type>KYU</cfg_type>
+    <cfg_file>rbc_conf_2464_m0.005_0.04_008545</cfg_file>
+    <parallel_io>TRUE</parallel_io>
+  </Cfg>
+</chroma>
