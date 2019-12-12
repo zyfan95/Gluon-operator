@@ -317,6 +317,54 @@ namespace Chroma
 
     }
 
+    multi2d<LatticeColorMatrix> fun_Opcomp(int len, int dir, multi2d<LatticeColorMatrix> F, LatticeColorMatrix u)
+    {
+        LatticeColorMatrix un;
+        multi2d<LatticeColorMatrix> Fn;
+        Fn.resize(Nd,Nd);
+        Fn = 0;
+        multi2d<LatticeColorMatrix> Opcomp;
+        Opcomp.resize(3,Nd);
+        Opcomp = 0;
+        un = wilsonline(dir, len, u); //calculate the wilson line
+
+        for(int mu = 0; mu < Nd; mu++)
+        {
+                for(int nu = mu+1; nu < Nd; nu++)
+                {
+                        Fn[nu][mu] = field(dir, len, F[nu][mu]); //shift the F_\mu\nu
+                        Fn[mu][nu] = -Fn[nu][mu];  //anti-symmetric
+                }
+        }
+
+
+        if(len==0) //local operators
+        {
+                for(int i=0;i<4; i++)
+                {
+                        Opcomp[0][i] = F[dir][i]*F[dir][i];
+			Opcomp[1][i] = F[3][i]*F[dir][i];
+			Opcomp[2][i] = F[3][i]*F[3][i];	       
+                }
+        }
+
+
+        else //non-local
+        {
+                for(int i=0;i<4; i++)
+                {
+                        Opcomp[0][i] = F[dir][i]*un*F[dir][i]*adj(un);
+                        Opcomp[1][i] = F[3][i]*un*F[dir][i]*adj(un);
+                        Opcomp[2][i] = F[3][i]*un*F[3][i]*adj(un);
+                }
+        }
+	
+	return Opcomp;
+    }
+
+
+
+
 
     /* The function is used to construct the operators (both local and non-local operators). 
      * The inputs are the wilson line length "len" and the direction "dir", gluon field F_\mu\nu, and the unit wilson link u
@@ -397,13 +445,15 @@ namespace Chroma
 	{
 		for(int i=0;i<4; i++)
                 {
+                        if(i!=dir)
+                        {
 			Op[0] += F[3][i]*F[3][i];
 			Op[1] += F[3][i]*F[dir][i];
 			Op[2] += F[dir][i]*F[dir][i];
                 	Op[3] += F[dir][i]*F[dir][i];
 			Op[4] += F[3][i]*F[3][i];
-			if(i==3 || i==3)
-			{ Op[5] += F[dir][i]*F[dir][i];}
+			}
+			Op[5] += F[dir][i]*F[dir][i];
                 }
 		for(int i=0;i<4; i++)
                 {
@@ -413,11 +463,23 @@ namespace Chroma
                                 Op[2] -= 0.5*F[j][i]*F[j][i];
                         }
                	}
-		Op[6] = F[dir][0]*F[dir][0];
-		Op[7] = F[dir][1]*F[dir][1];
-		Op[8] = F[dir][2]*F[dir][2];
-		Op[9] = F[dir][3]*F[dir][3];
-
+                for(int i=0;i<4; i++)
+                {
+			if(i!=dir)
+			{
+				Op[6] += F[3][i]*F[3][i];
+				Op[7] += F[dir][i]*F[dir][i];
+			}
+			if(i!=dir && i!=3)
+			{
+                                Op[8] += F[3][i]*F[3][i];
+                                Op[9] += F[dir][i]*F[dir][i];
+			}
+		//Op[6] = F[dir][0]*F[dir][0];
+		//Op[7] = F[dir][1]*F[dir][1];
+		//Op[8] = F[dir][2]*F[dir][2];
+		//Op[9] = F[dir][3]*F[dir][3];
+		}
  
 	}
 
@@ -426,13 +488,16 @@ namespace Chroma
 
 		for(int i=0;i<4; i++)
                 {
+			if(i!=dir)
+			{
                         Op[0] += F[3][i]*un*Fn[3][i]*adj(un);
                         Op[1] += F[3][i]*un*Fn[dir][i]*adj(un);
                         Op[2] += F[dir][i]*un*Fn[dir][i]*adj(un);
                         Op[3] += F[dir][i]*un*Fn[dir][i]*adj(un);
                         Op[4] += F[3][i]*un*Fn[3][i]*adj(un);
-                        if(i==dir || i==3)
-                        { Op[5] += F[dir][i]*un*Fn[dir][i]*adj(un);}
+			}
+                        
+                        Op[5] += F[dir][i]*un*Fn[dir][i]*adj(un);
                 }
                 for(int i=0;i<4; i++)
                 {
@@ -442,10 +507,23 @@ namespace Chroma
                                 Op[2] -= 0.5*F[j][i]*un*Fn[j][i]*adj(un);
                         }
                 }
-		Op[6] += F[dir][0]*un*Fn[dir][0]*adj(un);
-                Op[7] += F[dir][1]*un*Fn[dir][1]*adj(un);
-                Op[8] += F[dir][2]*un*Fn[dir][2]*adj(un);
-                Op[9] += F[dir][3]*un*Fn[dir][3]*adj(un);		
+                for(int i=0;i<4; i++)
+                {
+                        if(i!=dir)
+                        {
+                                Op[6] += F[3][i]*un*Fn[3][i]*adj(un);
+                                Op[7] += F[dir][i]*un*Fn[dir][i]*adj(un);
+                        }
+                        if(i!=dir && i!=3)
+                        {
+                                Op[8] += F[3][i]*un*Fn[3][i]*adj(un);
+                                Op[9] += F[dir][i]*un*Fn[dir][i]*adj(un);
+                        }
+		}
+		//Op[6] += F[dir][0]*un*Fn[dir][0]*adj(un);
+                //Op[7] += F[dir][1]*un*Fn[dir][1]*adj(un);
+                //Op[8] += F[dir][2]*un*Fn[dir][2]*adj(un);
+                //Op[9] += F[dir][3]*un*Fn[dir][3]*adj(un);		
 /*
                 for(int i=0;i<4; i++)
                 {
@@ -663,7 +741,7 @@ namespace Chroma
 	for(int dir = 0; dir < 3; dir++)
         {
                 QDPIO::cout << "Finding F" << std::endl;
-                int mn = 5; //maximum wilson length
+                int mn = 11; //maximum wilson length
                 /** Find F_{n,munu} **/
                 multi2d<LatticeColorMatrix> F, Fn;
                 F.resize(Nd,Nd);
@@ -686,6 +764,8 @@ namespace Chroma
                         }
                 }
 
+
+/*
                 multi3d<LatticeColorMatrix> f0;
                 f0.resize(4,Nd,Nd);
                 
@@ -747,7 +827,7 @@ namespace Chroma
 
 			}
 		}
-		
+*/		
 
 /*
 
@@ -916,7 +996,7 @@ namespace Chroma
 		// Print the F_\mu\nu at t=8, y=12, z=12 along x direction
                 for(int x = 0; x < Layout::lattSize()[0]; x++)
                 {
-                        QDPIO::cout <<"F21   "<< x << "   " << VecFmnre.at(x) << "   " << VecFmnim.at(x) << std::endl;
+                       // QDPIO::cout <<"F21   "<< x << "   " << VecFmnre.at(x) << "   " << VecFmnim.at(x) << std::endl;
 
                 }
 
@@ -955,10 +1035,12 @@ namespace Chroma
                         {
                         	for(int nu = 0; nu < Nd; nu++)
                         	{
-					QDPIO::cout <<"F   "<< t << "   "<< mu << "   " << nu << "   "  << F_sumre[mu][nu] << "   " << F_sumim[mu][nu] << std::endl;
+					//QDPIO::cout <<"F   "<< t << "   "<< mu << "   " << nu << "   "  << F_sumre[mu][nu] << "   " << F_sumim[mu][nu] << std::endl;
 				}
 			}
           	}
+
+
 		// loop over the wilson line length len
 		for(int len = 0; len < mn; len++)
         	{
@@ -966,12 +1048,30 @@ namespace Chroma
 			Op.resize(10);
 			Op = 0;
 			Op = fun_Operator(len, dir, F, u[dir]); //Obtain the operators
+
+
+
+
+                        multi2d<LatticeColorMatrix> Opcomp;
+                        Opcomp.resize(3,Nd);
+                        Opcomp = 0;
+                        Opcomp = fun_Opcomp(len, dir, F, u[dir]); //Obtain the operators components
+
+
+
 			//Calculate and print out the real(trace of the operators
 			for(int t = 0; t < Layout::lattSize()[3]; t++)
                         {
                                 multi1d<Double> op;
 				op.resize(10);
 				op = 0;
+
+
+                                multi2d<Double> opcomp;
+                                opcomp.resize(3,Nd);
+                                opcomp = 0;
+
+
                                 multi1d<int> tCoords;
                                 tCoords.resize(Nd);
                                 tCoords[3] = t;
@@ -986,11 +1086,36 @@ namespace Chroma
 						{
                                                 	op[i] += real(trace(peekSite(Op[i], tCoords)));
 						}
+
+						for(int k = 0; k < 3; k++)
+						{
+                                                for(int l = 0; l < 4; l++)
+                                                {
+                                                        opcomp[k][l] += real(trace(peekSite(Opcomp[k][l], tCoords)));
+                                                }
+						}
+
 					}
+				/*
+                		for(int l = 0; l < 4; l++)
+                		{
+                        		QDPIO::cout <<"Opcomp_zz   "<< dir << "  " << len <<"  "<< t <<"  "<< l <<"  "<< opcomp[0][l]<<std::endl;
+                        		QDPIO::cout <<"Opcomp_tz   "<< dir << "  " << len <<"  "<< t <<"  "<< l <<"  "<< opcomp[1][l]<<std::endl;
+                        		QDPIO::cout <<"Opcomp_tt   "<< dir << "  " << len <<"  "<< t <<"  "<< l <<"  "<< opcomp[2][l]<<std::endl;
+
+                		}*/
+
+
 				QDPIO::cout <<"Op   "<< dir << "  " << len <<"  "<< t <<"  "<< op[0] <<"  "<< op[1] <<"  "<< op[2] <<"  "<< op[3] <<"  "<< op[4]<<"  "<< op[5]<< "  "<< op[6]<<"  "<< op[7]<<"  "<< op[8]<<"  "<< op[9]<<std::endl;
 				
 			}//end of t loop
 		}//end of len loop
+
+
+
+
+
+
        /* 
                 for(int len = 1; len < 2; len++)
                 {
