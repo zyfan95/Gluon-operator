@@ -377,7 +377,7 @@ namespace Chroma
 	Fn.resize(Nd,Nd);
 	Fn = 0;
 	multi1d<LatticeColorMatrix> Op;
-	Op.resize(10);
+	Op.resize(11);
 	Op = 0;
 
 	un = wilsonline(dir, len, u); //calculate the wilson line
@@ -417,14 +417,25 @@ namespace Chroma
         }
 */	
 
+
+
 	/* Operators definition
- 	 * O(F_{\mu \nu},F^{\alpha \beta},len) = tr(F_{\mu \nu}(0)U(0,len)F_{\mu \nu}(len)U(0,len))
- 	 * O_0 = O(F_{\mu t},F^{\mu t},len)-1/4 O(F_{\mu \nu},F^{\mu \mu},len)
- 	 * O_1 = O(F_{\mu t},F^{\mu z},len)
- 	 * O_2 = O(F_{\mu z},F^{\mu z},len)-1/4 O(F_{\mu \nu},F^{\mu \mu},len)
- 	 * O_3 = O(F_{\mu z},F^{\mu z},len)
- 	 * O_4 = O(F_{\mu t},F^{\mu t},len)
- 	 * O_d = O(F_{t z},F^{t z},len)
+ 	 * O(F_{\mu \nu},F^{\alpha \beta},len) = tr(F_{\mu \nu}(0)U(0,len)F_{\mu \nu}(len)U(0,len)), \mu = 0,1,2,3, i=0,1,2 (without dir)
+ 	 * ZY Fan at el. Physical review letters, 121(24), 242001.
+ 	 * Op[0]: O_0 = O(F_{\mu t},F^{\mu t},len)-1/4 O(F_{\mu \nu},F^{\mu \mu},len)
+ 	 * Op[1]: O_1 = O(F_{\mu t},F^{\mu dir},len)
+ 	 * Op[2]: O_2 = O(F_{\mu dir},F^{\mu dir},len)-1/4 O(F_{\mu \nu},F^{\mu \mu},len)
+ 	 * Op[3]: O_3 = O(F_{\mu dir},F^{\mu dir},len)
+ 	 * Jianhui Zhang at el. 10.1103/PhysRevLett.122.142001
+ 	 * Op[6]: O_1 = O(F^{t i},F^{t i},len)
+ 	 * Op[7]: O_2 = O(F^{dir i},F^{dir i},len)
+ 	 * Op[5]: O_3 = O(F^{t i},F^{dir i},len)
+ 	 * Op[3]: O_4 = O(F^{dir \mu},F^{dir \mu},len)
+ 	 * Op[9]: \delta O_1 = \epsilon_ij O(F^{t i},F^{t j},len)
+ 	 * Op[8]: \delta O_2 = \epsilon_ij O(F^{dir i},F^{dir j},len)
+ 	 * Op[10]: \delta O_3 = \epsilon_ij O(F^{t i},F^{dir j},len)
+ 	 * arXiv:1910.13963v1
+ 	 * Op[4]: O = O(F^{dir i},F^{t i},len)
  	 */
 
 /*      //This is a test on the wrong combination of the links 
@@ -444,16 +455,14 @@ namespace Chroma
 	if(len==0) //local operators
 	{
 		for(int i=0;i<4; i++)
-                {
-                        if(i!=dir)
-                        {
+                { 
 			Op[0] += F[3][i]*F[3][i];
 			Op[1] += F[3][i]*F[dir][i];
 			Op[2] += F[dir][i]*F[dir][i];
                 	Op[3] += F[dir][i]*F[dir][i];
-			Op[4] += F[3][i]*F[3][i];
-			}
-			Op[5] += F[dir][i]*F[dir][i];
+			//Op[4] += F[3][i]*F[3][i];
+			
+			//Op[5] += F[dir][i]*F[dir][i];
                 }
 		for(int i=0;i<4; i++)
                 {
@@ -465,21 +474,37 @@ namespace Chroma
                	}
                 for(int i=0;i<4; i++)
                 {
-			if(i!=dir)
-			{
-				Op[6] += F[3][i]*F[3][i];
-				Op[7] += F[dir][i]*F[dir][i];
-			}
 			if(i!=dir && i!=3)
 			{
-                                Op[8] += F[3][i]*F[3][i];
-                                Op[9] += F[dir][i]*F[dir][i];
+				Op[4] += F[dir][i]*F[3][i];
+				Op[5] += F[3][i]*F[dir][i];
+                                Op[6] += F[3][i]*F[3][i];
+                                Op[7] += F[dir][i]*F[dir][i];
 			}
 		//Op[6] = F[dir][0]*F[dir][0];
 		//Op[7] = F[dir][1]*F[dir][1];
 		//Op[8] = F[dir][2]*F[dir][2];
 		//Op[9] = F[dir][3]*F[dir][3];
 		}
+                if(dir==0)
+                {
+                        Op[8] = F[3][1]*F[3][2]-F[3][2]*F[3][1];
+                        Op[9] = F[dir][1]*F[dir][2]-F[dir][2]*F[dir][1];
+                        Op[10] = F[3][1]*F[dir][2]-F[3][2]*F[dir][1];
+                }
+                else if(dir==1)
+                {
+                        Op[8] = F[3][2]*F[3][0]-F[3][0]*F[3][2];
+                        Op[9] = F[dir][2]*F[dir][0]-F[dir][0]*F[dir][2];
+                        Op[10] = F[3][2]*F[dir][0]-F[3][0]*F[dir][2];
+                }
+                else if(dir==2)
+                {
+                        Op[8] = F[3][0]*F[3][1]-F[3][1]*F[3][0];
+                        Op[9] = F[dir][0]*F[dir][1]-F[dir][dir]*F[3][0];
+                        Op[10] = F[3][0]*F[dir][1]-F[3][1]*F[dir][0];
+                }
+
  
 	}
 
@@ -488,16 +513,16 @@ namespace Chroma
 
 		for(int i=0;i<4; i++)
                 {
-			if(i!=dir)
-			{
+			
+			
                         Op[0] += F[3][i]*un*Fn[3][i]*adj(un);
                         Op[1] += F[3][i]*un*Fn[dir][i]*adj(un);
                         Op[2] += F[dir][i]*un*Fn[dir][i]*adj(un);
                         Op[3] += F[dir][i]*un*Fn[dir][i]*adj(un);
-                        Op[4] += F[3][i]*un*Fn[3][i]*adj(un);
-			}
+                        //Op[4] += F[3][i]*un*Fn[3][i]*adj(un);
+			
                         
-                        Op[5] += F[dir][i]*un*Fn[dir][i]*adj(un);
+                        //Op[5] += F[dir][i]*un*Fn[dir][i]*adj(un);
                 }
                 for(int i=0;i<4; i++)
                 {
@@ -509,17 +534,35 @@ namespace Chroma
                 }
                 for(int i=0;i<4; i++)
                 {
-                        if(i!=dir)
+                        if(i!=dir && i!=3)
                         {
+				Op[4] += F[dir][i]*un*Fn[3][i]*adj(un);
+				Op[5] += F[3][i]*un*Fn[dir][i]*adj(un);
                                 Op[6] += F[3][i]*un*Fn[3][i]*adj(un);
                                 Op[7] += F[dir][i]*un*Fn[dir][i]*adj(un);
                         }
-                        if(i!=dir && i!=3)
-                        {
-                                Op[8] += F[3][i]*un*Fn[3][i]*adj(un);
-                                Op[9] += F[dir][i]*un*Fn[dir][i]*adj(un);
-                        }
 		}
+		
+		if(dir==0)
+		{	
+			Op[8] = F[3][1]*un*Fn[3][2]*adj(un)-F[3][2]*un*Fn[3][1]*adj(un);
+			Op[9] = F[dir][1]*un*Fn[dir][2]*adj(un)-F[dir][2]*un*Fn[dir][1]*adj(un);
+			Op[10] = F[3][1]*un*Fn[dir][2]*adj(un)-F[3][2]*un*Fn[dir][1]*adj(un);
+		}
+		else if(dir==1)
+		{
+                        Op[8] = F[3][2]*un*Fn[3][0]*adj(un)-F[3][0]*un*Fn[3][2]*adj(un);
+                        Op[9] = F[dir][2]*un*Fn[dir][0]*adj(un)-F[dir][0]*un*Fn[dir][2]*adj(un);
+                        Op[10] = F[3][2]*un*Fn[dir][0]*adj(un)-F[3][0]*un*Fn[dir][2]*adj(un);
+		}
+		else if(dir==2)
+                {
+                        Op[8] = F[3][0]*un*Fn[3][1]*adj(un)-F[3][1]*un*Fn[3][0]*adj(un);
+                        Op[9] = F[dir][0]*un*Fn[dir][1]*adj(un)-F[dir][1]*un*Fn[dir][0]*adj(un);
+                        Op[10] = F[3][0]*un*Fn[dir][1]*adj(un)-F[3][1]*un*Fn[dir][0]*adj(un);
+                }
+
+
 		//Op[6] += F[dir][0]*un*Fn[dir][0]*adj(un);
                 //Op[7] += F[dir][1]*un*Fn[dir][1]*adj(un);
                 //Op[8] += F[dir][2]*un*Fn[dir][2]*adj(un);
@@ -1045,7 +1088,7 @@ namespace Chroma
 		for(int len = 0; len < mn; len++)
         	{
 			multi1d<LatticeColorMatrix> Op;
-			Op.resize(10);
+			Op.resize(13);
 			Op = 0;
 			Op = fun_Operator(len, dir, F, u[dir]); //Obtain the operators
 
@@ -1063,7 +1106,7 @@ namespace Chroma
 			for(int t = 0; t < Layout::lattSize()[3]; t++)
                         {
                                 multi1d<Double> op;
-				op.resize(10);
+				op.resize(11);
 				op = 0;
 
 
@@ -1082,7 +1125,7 @@ namespace Chroma
                                                 tCoords[0] = x;
                                                 tCoords[1] = y;
                                                 tCoords[2] = Z;
-						for(int i = 0; i < 10;i++)
+						for(int i = 0; i < 11;i++)
 						{
                                                 	op[i] += real(trace(peekSite(Op[i], tCoords)));
 						}
@@ -1106,7 +1149,18 @@ namespace Chroma
                 		}*/
 
 
-				QDPIO::cout <<"Op   "<< dir << "  " << len <<"  "<< t <<"  "<< op[0] <<"  "<< op[1] <<"  "<< op[2] <<"  "<< op[3] <<"  "<< op[4]<<"  "<< op[5]<< "  "<< op[6]<<"  "<< op[7]<<"  "<< op[8]<<"  "<< op[9]<<std::endl;
+//				QDPIO::cout <<"Op   "<< dir << "  " << len <<"  "<< t <<"  "<< op[0] <<"  "<< op[1] <<"  "<< op[2] <<"  "<< op[3] <<"  "<< op[4]<<"  "<< op[5]<< "  "<< op[6]<<"  "<< op[7]<<"  "<< op[8]<<"  "<< op[9]<<"  "<< op[10]<<"  "<< op[11]<<"  "<< op[12]<<std::endl;
+				QDPIO::cout <<"O0ZF   "<< dir << "  " << len <<"  "<< t <<"  "<< op[0]<<std::endl;
+                                QDPIO::cout <<"O1ZF   "<< dir << "  " << len <<"  "<< t <<"  "<< op[1]<<std::endl;
+                                QDPIO::cout <<"O2ZF   "<< dir << "  " << len <<"  "<< t <<"  "<< op[2]<<std::endl;
+                                QDPIO::cout <<"O3ZF   "<< dir << "  " << len <<"  "<< t <<"  "<< op[3]<<std::endl;
+                                QDPIO::cout <<"OIB    "<< dir << "  " << len <<"  "<< t <<"  "<< op[4]<<std::endl;
+                                QDPIO::cout <<"O1JZ   "<< dir << "  " << len <<"  "<< t <<"  "<< op[5]<<std::endl;
+                                QDPIO::cout <<"O2JZ   "<< dir << "  " << len <<"  "<< t <<"  "<< op[6]<<std::endl;
+                                QDPIO::cout <<"O3JZ   "<< dir << "  " << len <<"  "<< t <<"  "<< op[7]<<std::endl;
+                                QDPIO::cout <<"O1hJZ  "<< dir << "  " << len <<"  "<< t <<"  "<< op[8]<<std::endl;
+                                QDPIO::cout <<"O2hJZ  "<< dir << "  " << len <<"  "<< t <<"  "<< op[9]<<std::endl;
+                                QDPIO::cout <<"O3hJZ  "<< dir << "  " << len <<"  "<< t <<"  "<< op[10]<<std::endl;
 				
 			}//end of t loop
 		}//end of len loop
