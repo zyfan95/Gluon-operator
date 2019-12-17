@@ -1105,9 +1105,11 @@ namespace Chroma
 			//Calculate and print out the real(trace of the operators
 			for(int t = 0; t < Layout::lattSize()[3]; t++)
                         {
-                                multi1d<Double> op;
+                                multi1d<Double> op, opi;
 				op.resize(11);
 				op = 0;
+                                opi.resize(11);
+                                opi = 0;
 
 
                                 multi2d<Double> opcomp;
@@ -1128,6 +1130,7 @@ namespace Chroma
 						for(int i = 0; i < 11;i++)
 						{
                                                 	op[i] += real(trace(peekSite(Op[i], tCoords)));
+							opi[i] += imag(trace(peekSite(Op[i], tCoords)));
 						}
 
 						for(int k = 0; k < 3; k++)
@@ -1150,17 +1153,17 @@ namespace Chroma
 
 
 //				QDPIO::cout <<"Op   "<< dir << "  " << len <<"  "<< t <<"  "<< op[0] <<"  "<< op[1] <<"  "<< op[2] <<"  "<< op[3] <<"  "<< op[4]<<"  "<< op[5]<< "  "<< op[6]<<"  "<< op[7]<<"  "<< op[8]<<"  "<< op[9]<<"  "<< op[10]<<"  "<< op[11]<<"  "<< op[12]<<std::endl;
-				QDPIO::cout <<"O0ZF   "<< dir << "  " << len <<"  "<< t <<"  "<< op[0]<<std::endl;
-                                QDPIO::cout <<"O1ZF   "<< dir << "  " << len <<"  "<< t <<"  "<< op[1]<<std::endl;
-                                QDPIO::cout <<"O2ZF   "<< dir << "  " << len <<"  "<< t <<"  "<< op[2]<<std::endl;
-                                QDPIO::cout <<"O3ZF   "<< dir << "  " << len <<"  "<< t <<"  "<< op[3]<<std::endl;
-                                QDPIO::cout <<"OIB    "<< dir << "  " << len <<"  "<< t <<"  "<< op[4]<<std::endl;
-                                QDPIO::cout <<"O1JZ   "<< dir << "  " << len <<"  "<< t <<"  "<< op[5]<<std::endl;
-                                QDPIO::cout <<"O2JZ   "<< dir << "  " << len <<"  "<< t <<"  "<< op[6]<<std::endl;
-                                QDPIO::cout <<"O3JZ   "<< dir << "  " << len <<"  "<< t <<"  "<< op[7]<<std::endl;
-                                QDPIO::cout <<"O1hJZ  "<< dir << "  " << len <<"  "<< t <<"  "<< op[8]<<std::endl;
-                                QDPIO::cout <<"O2hJZ  "<< dir << "  " << len <<"  "<< t <<"  "<< op[9]<<std::endl;
-                                QDPIO::cout <<"O3hJZ  "<< dir << "  " << len <<"  "<< t <<"  "<< op[10]<<std::endl;
+				QDPIO::cout <<"O0ZF   "<< dir << "  " << len <<"  "<< t <<"  "<< op[0] <<"  "<< opi[0]<<std::endl;
+                                QDPIO::cout <<"O1ZF   "<< dir << "  " << len <<"  "<< t <<"  "<< op[1] <<"  "<< opi[1]<<std::endl;
+                                QDPIO::cout <<"O2ZF   "<< dir << "  " << len <<"  "<< t <<"  "<< op[2] <<"  "<< opi[2]<<std::endl;
+                                QDPIO::cout <<"O3ZF   "<< dir << "  " << len <<"  "<< t <<"  "<< op[3] <<"  "<< opi[3]<<std::endl;
+                                QDPIO::cout <<"OIB    "<< dir << "  " << len <<"  "<< t <<"  "<< op[4] <<"  "<< opi[4]<<std::endl;
+                                QDPIO::cout <<"O1JZ   "<< dir << "  " << len <<"  "<< t <<"  "<< op[5] <<"  "<< opi[5]<<std::endl;
+                                QDPIO::cout <<"O2JZ   "<< dir << "  " << len <<"  "<< t <<"  "<< op[6] <<"  "<< opi[6]<<std::endl;
+                                QDPIO::cout <<"O3JZ   "<< dir << "  " << len <<"  "<< t <<"  "<< op[7] <<"  "<< opi[7]<<std::endl;
+                                QDPIO::cout <<"O1hJZ  "<< dir << "  " << len <<"  "<< t <<"  "<< op[8] <<"  "<< opi[8]<<std::endl;
+                                QDPIO::cout <<"O2hJZ  "<< dir << "  " << len <<"  "<< t <<"  "<< op[9] <<"  "<< opi[9]<<std::endl;
+                                QDPIO::cout <<"O3hJZ  "<< dir << "  " << len <<"  "<< t <<"  "<< op[10] <<"  "<< opi[10]<<std::endl;
 				
 			}//end of t loop
 		}//end of len loop
