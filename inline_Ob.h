@@ -42,6 +42,8 @@ namespace Chroma
 	int radius;
 	double frequency;
 
+	int max_mom2 ; // max p^2
+
 	
 	// Parameters to pull from the xml file
 	std::string xml_file; //optional xml output
