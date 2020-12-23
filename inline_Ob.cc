@@ -1091,24 +1091,26 @@ namespace Chroma
 		
 		SftMom phases(params.max_mom2, false,  3); // 3D fourier transform
 
-		std::vector<int> mom_serial(phases.numMom());
+/*		std::vector<int> mom_serial(phases.numMom());
 		
 		for (int m=0; m < phases.numMom(); m++)
 		{
 			mom_serial[m]=(50-phases.numToMom(m)[0])+(50-phases.numToMom(m)[1])*100+(50-phases.numToMom(m)[2]) *10000+(50-phases.numToMom(m)[3])*1000000;
 		}
-
+*/
 		// loop over the wilson line length len
 		for(int len = 0; len < mn; len++)
         	{
 			multi1d<LatticeColorMatrix> Op;
-			multi2d<ColorMatrix> Op_t;
+			//multi2d<ColorMatrix> Op_t;
+			multi2d<DComplex> Op_t;
 			Op.resize(13);
 			Op = 0;
 			Op = fun_Operator(len, dir, F, u[dir]); //Obtain the operators
 
 
-
+			LatticeComplex traced_op = trace(Op[1]);
+			Op_t = phases.sft(traced_op); // Apply the fourier transform
 
                         multi2d<LatticeColorMatrix> Opcomp;
                         Opcomp.resize(3,Nd);
@@ -1119,7 +1121,8 @@ namespace Chroma
 			Double op_t;
 			for (int p=0; p<phases.numMom(); ++p){
 			for (int t = 0; t < Layout::lattSize()[3]; ++t) {
-				op_t = real(trace(Op_t[p][t]));
+				//op_t = real(trace(Op_t[p][t]));
+				op_t = real(Op_t[p][t]);
 				QDPIO::cout <<"O1ZF   "<< dir << "  " << len <<"  "<< t <<"  "<< p <<"  "<< op_t <<std::endl;
 				}
 			}	
@@ -1138,7 +1141,6 @@ namespace Chroma
                                 multi2d<Double> opcomp;
                                 opcomp.resize(3,Nd);
                                 opcomp = 0;
-
 
                                 multi1d<int> tCoords;
                                 tCoords.resize(Nd);
