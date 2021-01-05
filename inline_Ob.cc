@@ -787,7 +787,7 @@ namespace Chroma
 	for(int dir = 0; dir < 3; dir++)
         {
                 QDPIO::cout << "Finding F" << std::endl;
-                int mn = 11; //maximum wilson length
+                int mn = 7; //maximum wilson length
                 /** Find F_{n,munu} **/
                 multi2d<LatticeColorMatrix> F, Fn;
                 F.resize(Nd,Nd);
@@ -1020,7 +1020,7 @@ namespace Chroma
 		}//end of len loop
                 
 */
-
+/*
 		
 		// Obtain the F_21 at t=8, y=12, z=12 along x direction
                 std::vector<Double> VecFmnre, VecFmnim;
@@ -1045,7 +1045,7 @@ namespace Chroma
                        // QDPIO::cout <<"F21   "<< x << "   " << VecFmnre.at(x) << "   " << VecFmnim.at(x) << std::endl;
 
                 }
-
+*/
 		// Obtain and print the sum(trace( of F_\mu\nu to check the anti-symmetric.
                 for(int t = 0; t < Layout::lattSize()[3]; t++)
                 {
@@ -1110,6 +1110,24 @@ namespace Chroma
 
 
 			LatticeComplex traced_op = trace(Op[1]);
+                                
+			multi1d<int> tCoords;
+                        tCoords.resize(Nd);
+
+			      for(int t = 0; t < Layout::lattSize()[3]; t++)
+			        for(int x = 0; x < Layout::lattSize()[0];x++)
+                                  for(int y = 0; y < Layout::lattSize()[1];y++)
+                                    for(int Z = 0; Z < Layout::lattSize()[2];Z++)
+                                        {
+                                                tCoords[0] = x;
+                                                tCoords[1] = y;
+                                                tCoords[2] = Z;
+						tCoords[3] = t;
+						QDPIO::cout <<"traced_op   "<< dir << "  " << len <<"  "<< x <<"  "<< y <<"  "<< Z <<"  "<< t <<"  "<< peekSite(traced_op, tCoords)<<std::endl;
+
+                                        }
+
+			
 			Op_t = phases.sft(traced_op); // Apply the fourier transform
 
                         multi2d<LatticeColorMatrix> Opcomp;
